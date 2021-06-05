@@ -21,7 +21,7 @@ extern "C" {
  * Note: It used to be in ms with HRP2 kernel)
  */
 #define PERIOD_OPE_TSK  ( 4 * 1000)
-#define PERIOD_LOG_TSK  ( 4 * 1000)
+#define PERIOD_LOG_TSK  ( 400 * 1000)
 
 /*
  * Default task stack size in bytes
@@ -37,6 +37,7 @@ extern "C" {
 
 extern void main_task(intptr_t exinf);
 extern void operation_task(intptr_t exinf);
+extern void log_task(intptr_t exinf);
 
 #endif /* TOPPERS_MACRO_ONLY */
 

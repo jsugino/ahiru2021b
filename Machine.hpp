@@ -18,7 +18,7 @@ class Machine {
 private:
 protected:
 public:
-	ev3api::Motor*          leftMotor;
+    ev3api::Motor*          leftMotor;
     ev3api::Motor*          rightMotor;
     ev3api::Motor*          armMotor;
     ev3api::Motor*          tailMotor;
@@ -28,14 +28,14 @@ public:
     ev3api::GyroSensor*     gyroSensor;
     ev3api::ColorSensor*    colorSensor;
 
-	ev3api::Clock*          clock;
+    ev3api::Clock*          clock;
 
     int counter;
-	int32_t prevAngL, prevAngR;
-	int32_t distanceL, distanceR;
+    int32_t prevAngL, prevAngR;
+    int32_t distanceL, distanceR;
 
     Machine();
-	bool detect();
+    bool detect();
     ~Machine();
 };
 

@@ -5,9 +5,10 @@
 //
 
 #include "Machine.hpp"
+#include "Logger.hpp"
 
 Machine::Machine() {
-	printf("Machine constructor\n");
+    log("Machine constructor");
 
     leftMotor   = new ev3api::Motor(PORT_C);
     rightMotor  = new ev3api::Motor(PORT_B);
@@ -21,7 +22,7 @@ Machine::Machine() {
 
     clock       = new ev3api::Clock();
 
-	counter = -1;
+    counter = -1;
     prevAngL = leftMotor->getCount();
     prevAngR = rightMotor->getCount();
 }
@@ -29,13 +30,13 @@ Machine::Machine() {
 bool Machine::detect() {
     prevAngL = leftMotor->getCount();
     prevAngR = rightMotor->getCount();
-	if ( counter != -1 ) {
-		++counter;
-		if ( (counter % 250) == 0 ) {
-			printf("L = %d, R = %d, counter = %d\n",(int)prevAngL,(int)prevAngR,counter);
-		}
+    if ( counter != -1 ) {
+	++counter;
+	if ( (counter % 250) == 0 ) {
+	    log("L = %d, R = %d, counter = %d",(int)prevAngL,(int)prevAngR,counter);
 	}
-	return true;
+    }
+    return true;
 }
 
 Machine::~Machine() {
@@ -49,5 +50,5 @@ Machine::~Machine() {
     delete rightMotor;
     delete leftMotor;
 
-    printf("Machine destructor\n");
+    log("Machine destructor");
 }
