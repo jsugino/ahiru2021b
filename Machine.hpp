@@ -12,6 +12,7 @@
 #include "ColorSensor.h"
 #include "GyroSensor.h"
 #include "Motor.h"
+#include "Clock.h"
 
 class Machine {
 private:
@@ -26,8 +27,15 @@ public:
     ev3api::SonarSensor*    sonarSensor;
     ev3api::GyroSensor*     gyroSensor;
     ev3api::ColorSensor*    colorSensor;
-    
+
+	ev3api::Clock*          clock;
+
+    int counter;
+	int32_t prevAngL, prevAngR;
+	int32_t distanceL, distanceR;
+
     Machine();
+	bool detect();
     ~Machine();
 };
 

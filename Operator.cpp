@@ -25,6 +25,7 @@ void Operator::waitForTouch()
 {
 	if ( machine->touchSensor->isPressed() ) {
 		currentMethod = &Operator::lineTrace;
+		machine->counter = 0;
 	}
 }
 

@@ -17,6 +17,7 @@ void main_task(intptr_t unused)
 {
 	machine = new Machine();
 	operater = new Operator(machine);
+
     sta_cyc(CYC_OPE_TSK);
 
 	printf((operater->EDGE > 0)?"Left course\n":"Right course\n");
@@ -36,7 +37,9 @@ void main_task(intptr_t unused)
 /* 動作タスク */
 void operation_task(intptr_t unused)
 {
-	if ( !operater->operate() ) {
+	if ( !machine->detect() ) {
+		wup_tsk(MAIN_TASK);
+	} else if ( !operater->operate() ) {
 		wup_tsk(MAIN_TASK);
 	}
 }

@@ -18,6 +18,24 @@ Machine::Machine() {
     sonarSensor = new ev3api::SonarSensor(PORT_2);
     colorSensor = new ev3api::ColorSensor(PORT_3);
     gyroSensor  = new ev3api::GyroSensor(PORT_4);
+
+    clock       = new ev3api::Clock();
+
+	counter = -1;
+    prevAngL = leftMotor->getCount();
+    prevAngR = rightMotor->getCount();
+}
+
+bool Machine::detect() {
+    prevAngL = leftMotor->getCount();
+    prevAngR = rightMotor->getCount();
+	if ( counter != -1 ) {
+		++counter;
+		if ( (counter % 250) == 0 ) {
+			printf("L = %d, R = %d, counter = %d\n",(int)prevAngL,(int)prevAngR,counter);
+		}
+	}
+	return true;
 }
 
 Machine::~Machine() {
