@@ -47,7 +47,7 @@ void Operator::lineTrace()
     int8_t turn;         /* 旋回命令 */
     int8_t pwm_L, pwm_R; /* 左右モータPWM出力 */
 
-    // 計算用の一時変数
+    // 計算用の一時変数定義
 	int32_t curAngL = 0;
 	int32_t curAngR = 0;
 	double deltaDistL = 0;
