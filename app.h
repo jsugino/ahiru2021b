@@ -13,14 +13,27 @@ extern "C" {
  */
 
 #define PRIORITY_LOG_TSK    (TMIN_APP_TPRI + 0)
+#if 0 /* yamanaka_s */
+://#define PRIORITY_OBS_TSK    (TMIN_APP_TPRI + 1)
+://#define PRIORITY_OPE_TSK    (TMIN_APP_TPRI + 2)
+://#define PRIORITY_MAIN_TASK  (TMIN_APP_TPRI + 3)
+#else /* yamanaka_s */
 #define PRIORITY_OPE_TSK    (TMIN_APP_TPRI + 1)
 #define PRIORITY_MAIN_TASK  (TMIN_APP_TPRI + 2)
+#endif /* yamanaka_s */
 
 /**
  * Task periods in micro seconds
  * Note: It used to be in ms with HRP2 kernel)
  */
-#define PERIOD_OPE_TSK  ( 4 * 1000)
+#if 1 /* yamanaka_s */
+#define PERIOD_OPE_TSK  ( 500 )
+#else /* yamanaka_s */
+://#define PERIOD_OPE_TSK  ( 4 * 1000)
+#endif /* yamanaka_s */
+#if 0 /* yamanaka_s */
+://#define PERIOD_OBS_TSK  ( 4 * 1000)
+#endif /* yamanaka_s */
 #define PERIOD_LOG_TSK  ( 400 * 1000)
 
 /*
@@ -37,6 +50,9 @@ extern "C" {
 
 extern void main_task(intptr_t exinf);
 extern void operation_task(intptr_t exinf);
+#if 0 /* yamanaka_s */
+://extern void observer_task(intptr_t exinf);
+#endif /* yamanaka_s */
 extern void log_task(intptr_t exinf);
 
 #endif /* TOPPERS_MACRO_ONLY */

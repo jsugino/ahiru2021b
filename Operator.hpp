@@ -11,8 +11,14 @@
 
 class Operator {
 private:
+#if 1 /* yamanaka_s */
+	double		distance;
+	int32_t		prevAngL, prevAngR;
+	int32_t		logCnt;	
+#endif /* yamanaka_s */
 protected:
     Machine* machine;
+    int mode;
     void (Operator::*currentMethod)();
 public:
 #if defined(MAKE_RIGHT)
@@ -22,8 +28,11 @@ public:
 #endif
     Operator( Machine* machine );
     bool operate();
+    void waitForTouch();
     void lineTrace();
-    void slalomOn();
+#if 1 /* yamanaka_s */
+    void shortCut();
+#endif /* yamanaka_s */
     ~Operator();
 };
 

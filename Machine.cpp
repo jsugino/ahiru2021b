@@ -7,8 +7,7 @@
 #include "Machine.hpp"
 #include "Logger.hpp"
 
-Machine::Machine()
-{
+Machine::Machine() {
     log("Machine constructor");
 
     leftMotor   = new ev3api::Motor(PORT_C);
@@ -22,52 +21,20 @@ Machine::Machine()
     gyroSensor  = new ev3api::GyroSensor(PORT_4);
 
     clock       = new ev3api::Clock();
+
+    counter = -1;
+    prevAngL = leftMotor->getCount();
+    prevAngR = rightMotor->getCount();
 }
-
-// 各種センサーの初期値を取得する。
-void Machine::initialize()
-{
-    counter = 0;
-
-    distanceL = leftMotor->getCount();
-    distanceR = rightMotor->getCount();
-
-    armDownAngle = targetArmAngle = armAngle = armMotor->getCount();
-    armUpAngle = armDownAngle + 30;
-}
-
-// Arm related operations
-void Machine::armUp()
-{
-    if ( targetArmAngle != armUpAngle ) {
-	log("armUp");
-	targetArmAngle = armUpAngle;
-    }
-}
-
-void Machine::armDown()
-{
-    if ( targetArmAngle != armDownAngle ) {
-	log("armDown");
-	targetArmAngle = armDownAngle;
-    }
-}
-
 
 bool Machine::detect() {
-    distanceL = leftMotor->getCount();
-    distanceR = rightMotor->getCount();
-    armAngle = armMotor->getCount();
-    if ( (counter % 250) == 0 ) {
-	log("L = %d, R = %d, arm = %d, target = %d",
-	    (int)distanceL,(int)distanceR,(int)armAngle,(int)targetArmAngle);
-    }
-    ++counter;
-
-    if ( targetArmAngle < armAngle ) {
-	armMotor->setPWM(-30);
-    } else if ( targetArmAngle > armAngle ) {
-	armMotor->setPWM(30);
+    prevAngL = leftMotor->getCount();
+    prevAngR = rightMotor->getCount();
+    if ( counter != -1 ) {
+	++counter;
+	if ( (counter % 250) == 0 ) {
+	    log("L = %d, R = %d, counter = %d",(int)prevAngL,(int)prevAngR,counter);
+	}
     }
     return true;
 }
