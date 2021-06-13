@@ -10,8 +10,7 @@
 Operator::Operator( Machine* mcn ) {
     log("Operator constructor");
     machine = mcn;
-    mode = 0;
-    currentMethod = &Operator::waitForTouch;
+    currentMethod = &Operator::lineTrace;
 }
 
 bool Operator::operate()
@@ -20,14 +19,6 @@ bool Operator::operate()
     (this->*currentMethod)();
     if ( currentMethod == NULL ) return false;
     return true;
-}
-
-void Operator::waitForTouch()
-{
-    if ( machine->touchSensor->isPressed() ) {
-	currentMethod = &Operator::lineTrace;
-	machine->counter = 0;
-    }
 }
 
 void Operator::lineTrace()
@@ -39,10 +30,11 @@ void Operator::lineTrace()
     int8_t pwm_L, pwm_R; /* 左右モータPWM出力 */
 
     machine->colorSensor->getRawColor(cur_rgb);
-    grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
+    //grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
+    grayScaleBlueless = cur_rgb.r;
 
-    forward = 30;
-    turn = (30 - grayScaleBlueless)*EDGE;
+    forward = 50;
+    turn = (50 - grayScaleBlueless)*EDGE;
 
     pwm_L = forward - turn;
     pwm_R = forward + turn;
@@ -50,10 +42,24 @@ void Operator::lineTrace()
     machine->leftMotor->setPWM(pwm_L);
     machine->rightMotor->setPWM(pwm_R);
 
-    if ( mode > 10000 ) {
-	currentMethod = NULL;
+    if ( (machine->distanceL + machine->distanceR) > 28000 ) {
+	log("change to slalomOn");
+	currentMethod = &Operator::slalomOn;
+    }
+}
+
+void Operator::slalomOn()
+{
+    machine->leftMotor->setPWM(50);
+    machine->rightMotor->setPWM(50);
+    if ( (machine->distanceL + machine->distanceR) < 28800 ) {
+	machine->armUp();
     } else {
-	++mode;
+	machine->armDown();
+    }
+
+    if ( (machine->distanceL + machine->distanceR) > 31000 ) {
+	currentMethod = NULL;
     }
 }
 

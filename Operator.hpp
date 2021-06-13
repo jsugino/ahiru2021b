@@ -13,7 +13,6 @@ class Operator {
 private:
 protected:
     Machine* machine;
-    int mode;
     void (Operator::*currentMethod)();
 public:
 #if defined(MAKE_RIGHT)
@@ -23,8 +22,8 @@ public:
 #endif
     Operator( Machine* machine );
     bool operate();
-    void waitForTouch();
     void lineTrace();
+    void slalomOn();
     ~Operator();
 };
 
