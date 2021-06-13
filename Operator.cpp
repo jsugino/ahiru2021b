@@ -19,7 +19,7 @@ Operator::Operator( Machine* mcn ) {
 	prevAngL = prevAngR = 0;
 	logCnt = 0;	
 #endif /* yamanaka_s */
-    currentMethod = &Operator::waitForTouch;
+    currentMethod = &Operator::lineTrace;
 }
 
 bool Operator::operate()
@@ -30,6 +30,7 @@ bool Operator::operate()
     return true;
 }
 
+/*
 void Operator::waitForTouch()
 {
     if ( machine->touchSensor->isPressed() ) {
@@ -37,6 +38,7 @@ void Operator::waitForTouch()
 	machine->counter = 0;
     }
 }
+*/
 
 void Operator::lineTrace()
 {
@@ -55,17 +57,18 @@ void Operator::lineTrace()
 	double deltaDist = 0;
 
     machine->colorSensor->getRawColor(cur_rgb);
-    grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
+    //grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
+    grayScaleBlueless = cur_rgb.r;
 
-#if 1 /* yamanaka_s */
+#if 0 /* yamanaka_s */
     forward = 90;
     turn = (30 - grayScaleBlueless)*EDGE;
 	if(100 == logCnt || 0 == logCnt) {
 		printf("[Operator::lineTrace]grayScaleBlueless=%d,forward=%d,turn=%d \n",grayScaleBlueless,forward,turn);
 	}
 #else /* yamanaka_s */
-://    forward = 30;
-://    turn = (30 - grayScaleBlueless)*EDGE;
+	forward = 50;
+	turn = (50 - grayScaleBlueless)*EDGE;
 #endif /* yamanaka_s */
 
     pwm_L = forward - turn;
@@ -113,9 +116,43 @@ void Operator::lineTrace()
 }
 #if 1 /* yamanaka_s */
 void Operator::shortCut() {
-	
+
+    // 杉野より、山中さんへ、
+    // 以下には、とりあえず lineTrace と同じ動作をするプログラムを入れておきます。
+    // 正しく shortCut して、難所に入る直前に slalomOn に制御を渡してください。
+
+    // 【ここから】
+    rgb_raw_t cur_rgb;
+    machine->colorSensor->getRawColor(cur_rgb);
+    int16_t grayScaleBlueless = cur_rgb.r;
+    int8_t forward = 50;
+    int8_t turn = (50 - grayScaleBlueless)*EDGE;
+    int8_t pwm_L = forward - turn;
+    int8_t pwm_R = forward + turn;
+
+    machine->leftMotor->setPWM(pwm_L);
+    machine->rightMotor->setPWM(pwm_R);
+    if ( (machine->distanceL + machine->distanceR) > 28000 ) {
+	currentMethod = &Operator::slalomOn;
+    }
+    // 【ここまで】
 }
 #endif /* yamanaka_s */
+
+void Operator::slalomOn()
+{
+    machine->leftMotor->setPWM(50);
+    machine->rightMotor->setPWM(50);
+    if ( (machine->distanceL + machine->distanceR) < 28800 ) {
+	machine->armUp();
+    } else {
+	machine->armDown();
+    }
+
+    if ( (machine->distanceL + machine->distanceR) > 31000 ) {
+	currentMethod = NULL;
+    }
+}
 
 Operator::~Operator() {
     log("Operator destructor");

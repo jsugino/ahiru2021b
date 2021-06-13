@@ -31,10 +31,16 @@ public:
     ev3api::Clock*          clock;
 
     int counter;
-    int32_t prevAngL, prevAngR;
     int32_t distanceL, distanceR;
 
+    // Arm related definitions
+    int32_t armAngle, targetArmAngle, armDownAngle, armUpAngle;
+    int armSpeed;
+    void armUp();
+    void armDown();
+
     Machine();
+    void initialize();
     bool detect();
     ~Machine();
 };
