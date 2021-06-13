@@ -40,18 +40,19 @@ void Operator::waitForTouch()
 
 void Operator::lineTrace()
 {
+    // Added by Sugino
     rgb_raw_t cur_rgb;
     int16_t grayScaleBlueless;
     int8_t forward;      /* 前後進命令 */
     int8_t turn;         /* 旋回命令 */
     int8_t pwm_L, pwm_R; /* 左右モータPWM出力 */
-#if 1 /* yamanaka_s */
+
+    // 計算用の一時変数
 	int32_t curAngL = 0;
 	int32_t curAngR = 0;
 	double deltaDistL = 0;
 	double deltaDistR = 0;
 	double deltaDist = 0;
-#endif /* yamanaka_s */
 
     machine->colorSensor->getRawColor(cur_rgb);
     grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
