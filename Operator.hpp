@@ -28,12 +28,15 @@ public:
 #endif
     Operator( Machine* machine );
     bool operate();
-    void waitForTouch();
+    //void waitForTouch();
     void lineTrace();
 #if 1 /* yamanaka_s */
     void shortCut();
 #endif /* yamanaka_s */
     ~Operator();
+
+    // スラローム用定義
+    void slalomOn();
 };
 
 #endif /* Operator_hpp */

@@ -36,13 +36,21 @@ void main_task(intptr_t unused)
 #endif /* yamanaka_s */
 
     sta_cyc(CYC_LOG_TSK);
-    sta_cyc(CYC_OPE_TSK);
 #if 0 /* yamanaka_s */
 :// 	sta_cyc(CYC_OBS_TSK);
 #endif /* yamanaka_s */
 
     log("%s cource",(operater->EDGE > 0)?"Left":"Right");
     log("Hit SPACE bar to start");
+
+    /* タッチセンサが押されるまで待つ */
+    while ( !machine->touchSensor->isPressed() ) tslp_tsk(10 * 1000U); /* 10msecウェイト */
+
+    /* タッチセンサーが押されるまで、他のセンセー類が初期化がされていないため、
+       それまで待ってから、センサーの初期値を取得する。 */
+    machine->initialize();
+
+    sta_cyc(CYC_OPE_TSK);
 
     // sleep until being waken up
     ER ercd = slp_tsk();
