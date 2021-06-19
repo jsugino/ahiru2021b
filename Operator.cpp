@@ -25,6 +25,7 @@ Operator::Operator( Machine* mcn ) {
 bool Operator::operate()
 {
     if ( currentMethod == NULL ) return false;
+	this->updatedistance();
     (this->*currentMethod)();
     if ( currentMethod == NULL ) return false;
     return true;
@@ -49,66 +50,35 @@ void Operator::lineTrace()
     int8_t turn;         /* 旋回命令 */
     int8_t pwm_L, pwm_R; /* 左右モータPWM出力 */
 
-    // 計算用の一時変数定義
-	int32_t curAngL = 0;
-	int32_t curAngR = 0;
-	double deltaDistL = 0;
-	double deltaDistR = 0;
-	double deltaDist = 0;
-
     machine->colorSensor->getRawColor(cur_rgb);
-    //grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
-    grayScaleBlueless = cur_rgb.r;
+    grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
+    //grayScaleBlueless = cur_rgb.r;
 
-#if 0 /* yamanaka_s */
-    forward = 90;
+    forward = 30;
     turn = (30 - grayScaleBlueless)*EDGE;
+
+	/* ログ出力　*/
 	if(100 == logCnt || 0 == logCnt) {
 		printf("[Operator::lineTrace]grayScaleBlueless=%d,forward=%d,turn=%d \n",grayScaleBlueless,forward,turn);
 	}
-#else /* yamanaka_s */
-	forward = 50;
-	turn = (50 - grayScaleBlueless)*EDGE;
-#endif /* yamanaka_s */
 
     pwm_L = forward - turn;
     pwm_R = forward + turn;
-#if 0 /* yamanaka_s */
+
+	/* ログ出力　*/
 	if(100 == logCnt || 0 == logCnt) {
 		printf("[Operator::lineTrace]pwm_L=%d,pwm_R=%d\n",pwm_L,pwm_R);
 	}
-#endif /* yamanaka_s */
 
     machine->leftMotor->setPWM(pwm_L);
     machine->rightMotor->setPWM(pwm_R);
 
-#if 0 /* yamanaka_s */
-	/* 走行距離を算出する */
-	curAngL = machine->leftMotor->getCount();
-	curAngR = machine->rightMotor->getCount();
-	deltaDistL = M_PI * TIRE_DIAMETER * (curAngL - prevAngL) / 360.0;
-	deltaDistR = M_PI * TIRE_DIAMETER * (curAngR - prevAngR) / 360.0;
-	deltaDist = (deltaDistL + deltaDistR) / 2.0;
-
-	distance += deltaDist;
-	prevAngL = curAngL;
-	prevAngR = curAngR;
-
-	if(100 == logCnt) {
-		printf("[Operator::lineTrace] distance = %f \n",distance);
-		logCnt = 0;
-	}
-	logCnt++;
-	
 	/* 走行距離が5000に到達した場合、linTraceを終了後、ショートカット */
 	if( 5000 <= distance ) {
 		currentMethod = &Operator::shortCut;
 	}
 	
     if ( mode > 100000 ) {
-#else /* yamanaka_s */
-    if ( mode > 10000 ) {
-#endif /* yamanaka_s */
 	currentMethod = NULL;
 	currentMethod = &Operator::shortCut;
     } else {
@@ -153,6 +123,33 @@ void Operator::slalomOn()
     if ( (machine->distanceL + machine->distanceR) > 31000 ) {
 	currentMethod = NULL;
     }
+}
+/* 走行距離更新 */
+void Operator::updatedistance()
+{
+    // 計算用の一時変数定義
+	int32_t curAngL = 0;
+	int32_t curAngR = 0;
+	double deltaDistL = 0;
+	double deltaDistR = 0;
+	double deltaDist = 0;
+
+	/* 走行距離を算出する */
+	curAngL = machine->leftMotor->getCount();
+	curAngR = machine->rightMotor->getCount();
+	deltaDistL = M_PI * TIRE_DIAMETER * (curAngL - prevAngL) / 360.0;
+	deltaDistR = M_PI * TIRE_DIAMETER * (curAngR - prevAngR) / 360.0;
+	deltaDist = (deltaDistL + deltaDistR) / 2.0;
+
+	distance += deltaDist;
+	prevAngL = curAngL;
+	prevAngR = curAngR;
+
+	if(100 == logCnt) {
+		printf("[Operator::lineTrace] distance = %f \n",distance);
+		logCnt = 0;
+	}
+	logCnt++;
 }
 
 Operator::~Operator() {
