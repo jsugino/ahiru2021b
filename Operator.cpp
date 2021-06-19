@@ -58,7 +58,7 @@ void Operator::lineTrace()
     grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
 
 #if 1 /* yamanaka_s */
-    forward = 90;
+    forward = 30;
     turn = (30 - grayScaleBlueless)*EDGE;
 	if(100 == logCnt || 0 == logCnt) {
 		printf("[Operator::lineTrace]grayScaleBlueless=%d,forward=%d,turn=%d \n",grayScaleBlueless,forward,turn);
