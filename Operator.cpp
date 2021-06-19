@@ -18,7 +18,7 @@ Operator::Operator( Machine* mcn ) {
     logCnt = 0;	
     courseMapindex =0;
 //    currentMethod = &Operator::lineTrace;
-    currentMethod = &Operator::useCourseMap;
+    currentMethod = &Operator::startRun;
 }
 
 bool Operator::operate()
@@ -131,12 +131,7 @@ void Operator::useCourseMap()
     if( 5000 <= distance ) {
         currentMethod = &Operator::shortCut;
     }
-	
-    if ( mode > 100000 ) {
-    currentMethod = NULL;
-    } else {
-    ++mode;
-    }
+
 }
 #if 1 /* yamanaka_s */
 void Operator::shortCut() {
@@ -176,6 +171,43 @@ void Operator::slalomOn()
     if ( (machine->distanceL + machine->distanceR) > 31000 ) {
 	currentMethod = NULL;
     }
+}
+void Operator::startRun()
+{
+    rgb_raw_t cur_rgb;
+    int16_t grayScaleBlueless;
+    int8_t forward;      /* 前後進命令 */
+    int8_t turn;         /* 旋回命令 */
+    int8_t pwm_L, pwm_R; /* 左右モータPWM出力 */
+
+    machine->colorSensor->getRawColor(cur_rgb);
+    grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
+    //grayScaleBlueless = cur_rgb.r;
+
+    forward = 45;
+    turn = (45 - grayScaleBlueless)*EDGE;
+
+    /* ログ出力　*/
+    if(LOG == logCnt || 0 == logCnt) {
+        printf("[Operator::startRun]grayScaleBlueless=%d,forward=%d,turn=%d \n",grayScaleBlueless,forward,turn);
+    }
+
+    pwm_L = forward - turn;
+    pwm_R = forward + turn;
+
+    /* ログ出力　*/
+    if(LOG == logCnt || 0 == logCnt) {
+        printf("[Operator::startRun]pwm_L=%d,pwm_R=%d\n",pwm_L,pwm_R);
+    }
+
+    machine->leftMotor->setPWM(pwm_L);
+    machine->rightMotor->setPWM(pwm_R);
+
+    /* 走行距離が200に到達した場合、useCourseMapへ変更 */
+    if( 200 <= distance ) {
+        currentMethod = &Operator::useCourseMap;
+    }
+
 }
 /* 走行距離更新 */
 void Operator::updateDistance()

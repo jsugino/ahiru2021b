@@ -19,10 +19,12 @@ private:
     int32_t     courseMapindex;	
     /* ショートカット */
     void shortCut();
-    /* 走行距離更新 */
-    void updateDistance();
     /* コースマップを使って走る */
     void useCourseMap();
+    /* 走行開始 */
+	void startRun();
+    /* 走行距離更新 */
+    void updateDistance();
 #endif /* yamanaka_s */
 protected:
     Machine* machine;
@@ -50,8 +52,8 @@ struct courseSection {
 };
 const struct courseSection courseMap[] = {
 	{"Bst00", 2000, 0.0},    // the st00 end point used to set d_cv01_midpoint below!!!
-	{"Bcv01", 2700, 0.5334},
-	{"Bcv01", 1821, 0.5333}, // the cv01 end point used to set d_cv01_midpoint below!!!
+	{"Bcv01", 2500, 0.5334},
+	{"Bcv02", 3300, 0.0}, // the cv01 end point used to set d_cv01_midpoint below!!!
 	{"Bst02", 2175, 0.0},
 	{"Bcv03", 3361,-0.4793},
 	{"Bst04", 3902, 0.0},
