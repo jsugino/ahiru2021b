@@ -15,6 +15,10 @@ private:
 	double		distance;
 	int32_t		prevAngL, prevAngR;
 	int32_t		logCnt;	
+    /* ショートカット */
+    void shortCut();
+    /* 走行距離更新 */
+    void updatedistance();
 #endif /* yamanaka_s */
 protected:
     Machine* machine;
@@ -30,9 +34,6 @@ public:
     bool operate();
     //void waitForTouch();
     void lineTrace();
-#if 1 /* yamanaka_s */
-    void shortCut();
-#endif /* yamanaka_s */
     ~Operator();
 
     // スラローム用定義
