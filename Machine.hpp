@@ -14,6 +14,8 @@
 #include "Motor.h"
 #include "Clock.h"
 
+#include "Logger.hpp"
+
 class Machine {
 private:
 protected:
@@ -29,6 +31,9 @@ public:
     ev3api::ColorSensor*    colorSensor;
 
     ev3api::Clock*          clock;
+
+    Logger loggerDistL;
+    Logger loggerDistR;
 
     int counter;
     int32_t distanceL, distanceR;

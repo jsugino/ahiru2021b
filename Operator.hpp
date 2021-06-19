@@ -14,7 +14,7 @@ private:
 #if 1 /* yamanaka_s */
 	double		distance;
 	int32_t		prevAngL, prevAngR;
-	int32_t		logCnt;	
+	int32_t		logCnt;
     /* ショートカット */
     void shortCut();
     /* 走行距離更新 */
