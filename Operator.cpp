@@ -90,7 +90,7 @@ void Operator::lineTrace()
     }
 }
 /* コースマップを使って走る */
-void Operator::useCourseMap()
+void Operator::blindRunner()
 {
     // Added by Sugino
     rgb_raw_t cur_rgb;
@@ -127,9 +127,9 @@ void Operator::useCourseMap()
     machine->leftMotor->setPWM(pwm_L);
     machine->rightMotor->setPWM(pwm_R);
 
-    /* 走行距離が5000に到達した場合、useCourseMapを終了後、ショートカット */
+    /* 走行距離がXXXXに到達した場合、lineTraceへ遷移 */
     if( 5000 <= distance ) {
-        currentMethod = &Operator::shortCut;
+        currentMethod = &Operator::lineTrace;
     }
 
 }
@@ -184,8 +184,8 @@ void Operator::startRun()
     grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
     //grayScaleBlueless = cur_rgb.r;
 
-    forward = 45;
-    turn = (45 - grayScaleBlueless)*EDGE;
+    forward = 35;
+    turn = (35 - grayScaleBlueless)*EDGE;
 
     /* ログ出力　*/
     if(LOG == logCnt || 0 == logCnt) {
@@ -203,9 +203,9 @@ void Operator::startRun()
     machine->leftMotor->setPWM(pwm_L);
     machine->rightMotor->setPWM(pwm_R);
 
-    /* 走行距離が200に到達した場合、useCourseMapへ変更 */
+    /* 走行距離が200に到達した場合、blindRunnerへ変更 */
     if( 200 <= distance ) {
-        currentMethod = &Operator::useCourseMap;
+        currentMethod = &Operator::blindRunner;
     }
 
 }

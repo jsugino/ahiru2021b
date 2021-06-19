@@ -20,7 +20,7 @@ private:
     /* ショートカット */
     void shortCut();
     /* コースマップを使って走る */
-    void useCourseMap();
+    void blindRunner();
     /* 走行開始 */
 	void startRun();
     /* 走行距離更新 */
@@ -54,20 +54,7 @@ const struct courseSection courseMap[] = {
 	{"Bst00", 2000, 0.0},    // the st00 end point used to set d_cv01_midpoint below!!!
 	{"Bcv01", 2500, 0.5334},
 	{"Bcv02", 3300, 0.0}, // the cv01 end point used to set d_cv01_midpoint below!!!
-	{"Bst02", 2175, 0.0},
-	{"Bcv03", 3361,-0.4793},
-	{"Bst04", 3902, 0.0},
-  	{"Bcv05", 4527,-0.45},
-	{"Bst06", 5050, 0.0},
-	{"Bcv07", 5676, 0.45},
-	{"Bst08", 5951, 0.0},
-	{"Bcv09", 6567, 0.45},
-	{"Bst10", 6875, 0.0},  //  6905
-	{"Bcv11", 7645, 0.3},  //  7675
-	{"Bst12", 9040, 0.0},  //  9070
-	{"Bcv13", 9715,-0.33}, //  9745
-	{"Rst14",10733, 0.0},  // 10763
-	{"Lst14",10733, 0.0},  // 10763
+	{"Bcv03", 4200, 0.5334}, // the cv01 end point used to set d_cv01_midpoint below!!!
 	{"Lcv15",DIST_end_blind,-0.247}
 }; // Note: size of this array is given by sizeof(courseMap)/sizeof(*courseMap)
 
