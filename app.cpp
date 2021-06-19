@@ -22,23 +22,11 @@ Operator* operater;
 /* メインタスク */
 void main_task(intptr_t unused)
 {
-#if 0 /* yamanaka_s */
-://    Motor*          leftMotor;
-://    Motor*          rightMotor;
-#endif /* yamanaka_s */
     initlog();
     machine = new Machine();
     operater = new Operator(machine);
-#if 0 /* yamanaka_s */
-://    leftMotor   = new Motor(PORT_C);
-://    rightMotor  = new Motor(PORT_B);
-://    observer = new Observer(leftMotor, rightMotor);
-#endif /* yamanaka_s */
 
     sta_cyc(CYC_LOG_TSK);
-#if 0 /* yamanaka_s */
-:// 	sta_cyc(CYC_OBS_TSK);
-#endif /* yamanaka_s */
 
     log("%s cource",(operater->EDGE > 0)?"Left":"Right");
     log("Hit SPACE bar to start");
@@ -58,9 +46,6 @@ void main_task(intptr_t unused)
 
     stp_cyc(CYC_OPE_TSK);
     stp_cyc(CYC_LOG_TSK);
-#if 0 /* yamanaka_s */
-://	stp_cyc(CYC_OBS_TSK);
-#endif /* yamanaka_s */
 
     delete operater;
     delete machine;
@@ -78,14 +63,6 @@ void operation_task(intptr_t unused)
     }
 }
 
-#if 0 /* yamanaka_s */
-:// Observer's periodic task
-://void observer_task(intptr_t unused) {
-://    if (observer != NULL) {
-://		observer->operate();
-://	}
-://}
-#endif /* yamanaka_s */
 
 /* ログ出力タスク */
 void log_task(intptr_t unused)

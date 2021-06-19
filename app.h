@@ -26,14 +26,7 @@ extern "C" {
  * Task periods in micro seconds
  * Note: It used to be in ms with HRP2 kernel)
  */
-#if 1 /* yamanaka_s */
-#define PERIOD_OPE_TSK  ( 500 )
-#else /* yamanaka_s */
-://#define PERIOD_OPE_TSK  ( 4 * 1000)
-#endif /* yamanaka_s */
-#if 0 /* yamanaka_s */
-://#define PERIOD_OBS_TSK  ( 4 * 1000)
-#endif /* yamanaka_s */
+#define PERIOD_OPE_TSK  ( 4 * 1000)
 #define PERIOD_LOG_TSK  ( 400 * 1000)
 
 /*
