@@ -73,7 +73,7 @@ void Operator::lineTrace()
 
     pwm_L = forward - turn;
     pwm_R = forward + turn;
-#if 1 /* yamanaka_s */
+#if 0 /* yamanaka_s */
 	if(100 == logCnt || 0 == logCnt) {
 		printf("[Operator::lineTrace]pwm_L=%d,pwm_R=%d\n",pwm_L,pwm_R);
 	}
@@ -82,7 +82,7 @@ void Operator::lineTrace()
     machine->leftMotor->setPWM(pwm_L);
     machine->rightMotor->setPWM(pwm_R);
 
-#if 1 /* yamanaka_s */
+#if 0 /* yamanaka_s */
 	/* 走行距離を算出する */
 	curAngL = machine->leftMotor->getCount();
 	curAngR = machine->rightMotor->getCount();
@@ -110,6 +110,7 @@ void Operator::lineTrace()
     if ( mode > 10000 ) {
 #endif /* yamanaka_s */
 	currentMethod = NULL;
+	currentMethod = &Operator::shortCut;
     } else {
 	++mode;
     }
