@@ -84,11 +84,6 @@ void Operator::lineTrace()
 
     machine->leftMotor->setPWM(pwm_L);
     machine->rightMotor->setPWM(pwm_R);
-
-    /* 走行距離が5000に到達した場合、linTraceを終了後、ショートカット */
-    if( 5000 <= distance ) {
-        currentMethod = &Operator::shortCut;
-    }
 	
     if ( mode > 100000 ) {
     currentMethod = NULL;
@@ -135,7 +130,7 @@ void Operator::blindRunner()
     machine->rightMotor->setPWM(pwm_R);
 
     /* 走行距離がXXXXに到達した場合、lineTraceへ遷移 */
-    if( 5000 <= distance ) {
+    if( 7500 <= distance ) {
         currentMethod = &Operator::lineTrace;
     }
 

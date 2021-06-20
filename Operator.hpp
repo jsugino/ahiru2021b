@@ -63,7 +63,7 @@ const struct courseSection courseMap[] = {
     {"Bst04", 4285, 0.0},
     {"Bcv05", 4750, -0.5334},
     {"Bst06", 4910, 0.0},
-    {"Bcv07", 5175, -0.5335},
+    {"Bcv07", 5375, -0.5335},
     {"Bst08", 5535, 0.0},
     {"Bcv09", 6000, 0.5335},
     {"Bst10", 6008, 0.0},
@@ -72,6 +72,27 @@ const struct courseSection courseMap[] = {
     {"Bcv13", 7133, -0.927},
     {"Bst14", 7200, 0.0},
     {"Lst15", 9000, 0.0},
+    {"Lcv16",DIST_end_blind,0.247}
+
+/*
+    {"Bst00", 2050, 0.0},
+    {"Bcv00", 2565, -0.5334},
+    {"Bcv02", 3265, 0.0},
+    {"Bcv03", 3980, -0.8},
+    {"Bst04", 4285, 0.0},
+    {"Bcv05", 4750, 0.5334},
+    {"Bst06", 4910, 0.0},
+    {"Bcv07", 5375, 0.5335},
+    {"Bst08", 5535, 0.0},
+    {"Bcv09", 6000, -0.5335},
+    {"Bst10", 6008, 0.0},
+    {"Bcv11", 6483, -0.5335},
+    {"Bst12", 6493, 0.0},
+    {"Bcv13", 7133, 0.927},
+    {"Bst14", 7200, 0.0},
+    {"Lst15", 9000, 0.0},
+    {"Lcv16",DIST_end_blind,-0.247}
+*/
     }; // Note: size of this array is given by sizeof(courseMap)/sizeof(*courseMap)
 
 #endif /* Operator_hpp */
