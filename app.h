@@ -8,26 +8,12 @@
 extern "C" {
 #endif
 
-/*
- *  各タスクの優先度の定義
- */
-
-#define PRIORITY_LOG_TSK    (TMIN_APP_TPRI + 0)
-#if 0 /* yamanaka_s */
-://#define PRIORITY_OBS_TSK    (TMIN_APP_TPRI + 1)
-://#define PRIORITY_OPE_TSK    (TMIN_APP_TPRI + 2)
-://#define PRIORITY_MAIN_TASK  (TMIN_APP_TPRI + 3)
-#else /* yamanaka_s */
-#define PRIORITY_OPE_TSK    (TMIN_APP_TPRI + 1)
-#define PRIORITY_MAIN_TASK  (TMIN_APP_TPRI + 2)
-#endif /* yamanaka_s */
-
 /**
  * Task periods in micro seconds
  * Note: It used to be in ms with HRP2 kernel)
  */
 #define PERIOD_OPE_TSK  ( 4 * 1000)
-#define PERIOD_LOG_TSK  ( 400 * 1000)
+#define PERIOD_LOG_TSK  ( 4 * 1000)
 
 /*
  * Default task stack size in bytes

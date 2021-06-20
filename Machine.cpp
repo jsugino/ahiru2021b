@@ -7,7 +7,7 @@
 #include "Machine.hpp"
 #include "Logger.hpp"
 
-Machine::Machine() {
+Machine::Machine() : loggerDistL("distL"), loggerDistR("distR") {
     log("Machine constructor");
 
     leftMotor   = new ev3api::Motor(PORT_C);
@@ -57,6 +57,8 @@ void Machine::armDown()
 bool Machine::detect() {
     distanceL = leftMotor->getCount();
     distanceR = rightMotor->getCount();
+    loggerDistL.logging(distanceL);
+    loggerDistR.logging(distanceR);
 
     if ( (counter % 250) == 0 ) {
 	log("L = %d, R = %d, arm = %d, target = %d",

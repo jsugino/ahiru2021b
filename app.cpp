@@ -30,7 +30,6 @@ void main_task(intptr_t unused)
 
     log("%s cource",(operater->EDGE > 0)?"Left":"Right");
     log("Hit SPACE bar to start");
-
     /* タッチセンサが押されるまで待つ */
     while ( !machine->touchSensor->isPressed() ) tslp_tsk(10 * 1000U); /* 10msecウェイト */
 

@@ -59,12 +59,19 @@ void Operator::lineTrace()
     grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
     //grayScaleBlueless = cur_rgb.r;
 
-    forward = 30;
-    turn = (30 - grayScaleBlueless)*EDGE;
+    int8_t speed;
+    if ( (machine->distanceL + machine->distanceR) < 1000 ) {
+	speed = 40;
+    } else {
+	speed = 70;
+    }
+	
+    forward = speed;
+    turn = (speed - grayScaleBlueless)*EDGE;
 
     /* ログ出力　*/
     if(LOG == logCnt || 0 == logCnt) {
-        printf("[Operator::lineTrace]grayScaleBlueless=%d,forward=%d,turn=%d \n",grayScaleBlueless,forward,turn);
+        log("[Operator::lineTrace]grayScaleBlueless=%d,forward=%d,turn=%d",grayScaleBlueless,forward,turn);
     }
 
     pwm_L = forward - turn;
@@ -72,7 +79,7 @@ void Operator::lineTrace()
 
     /* ログ出力　*/
     if(LOG == logCnt || 0 == logCnt) {
-        printf("[Operator::lineTrace]pwm_L=%d,pwm_R=%d\n",pwm_L,pwm_R);
+        log("[Operator::lineTrace]pwm_L=%d,pwm_R=%d",pwm_L,pwm_R);
     }
 
     machine->leftMotor->setPWM(pwm_L);
@@ -113,7 +120,7 @@ void Operator::blindRunner()
 
     /* ログ出力　*/
     if(LOG == logCnt || 0 == logCnt) {
-        printf("[Operator::lineTrace]grayScaleBlueless=%d,forward=%d,turn=%d \n",grayScaleBlueless,forward,turn);
+        log("[Operator::blindRunner]grayScaleBlueless=%d,forward=%d,turn=%d",grayScaleBlueless,forward,turn);
     }
 
     pwm_L = forward - turn;
@@ -121,7 +128,7 @@ void Operator::blindRunner()
 
     /* ログ出力　*/
     if(LOG == logCnt || 0 == logCnt) {
-        printf("[Operator::lineTrace]pwm_L=%d,pwm_R=%d\n",pwm_L,pwm_R);
+        log("[Operator::blindRunner]pwm_L=%d,pwm_R=%d",pwm_L,pwm_R);
     }
 
     machine->leftMotor->setPWM(pwm_L);
@@ -144,8 +151,8 @@ void Operator::shortCut() {
     rgb_raw_t cur_rgb;
     machine->colorSensor->getRawColor(cur_rgb);
     int16_t grayScaleBlueless = cur_rgb.r;
-    int8_t forward = 50;
-    int8_t turn = (50 - grayScaleBlueless)*EDGE;
+    int8_t forward = 60;
+    int8_t turn = (60 - grayScaleBlueless)*EDGE;
     int8_t pwm_L = forward - turn;
     int8_t pwm_R = forward + turn;
 
@@ -189,7 +196,7 @@ void Operator::startRun()
 
     /* ログ出力　*/
     if(LOG == logCnt || 0 == logCnt) {
-        printf("[Operator::startRun]grayScaleBlueless=%d,forward=%d,turn=%d \n",grayScaleBlueless,forward,turn);
+        log("[Operator::startRun]grayScaleBlueless=%d,forward=%d,turn=%d",grayScaleBlueless,forward,turn);
     }
 
     pwm_L = forward - turn;
@@ -197,7 +204,7 @@ void Operator::startRun()
 
     /* ログ出力　*/
     if(LOG == logCnt || 0 == logCnt) {
-        printf("[Operator::startRun]pwm_L=%d,pwm_R=%d\n",pwm_L,pwm_R);
+        log("[Operator::startRun]pwm_L=%d,pwm_R=%d",pwm_L,pwm_R);
     }
 
     machine->leftMotor->setPWM(pwm_L);
@@ -231,7 +238,7 @@ void Operator::updateDistance()
 	prevAngR = curAngR;
 
 	if(LOG == logCnt) {
-		printf("[Operator::lineTrace] distance = %f \n",distance);
+	    log("[Operator::updateDistance] distance = %f",distance);
 	}
 }
 
