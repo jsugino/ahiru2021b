@@ -8,6 +8,8 @@
 #include "Logger.hpp"
 #include "ahiru_common.hpp"
 #define LOG 100 
+#define CHANGE_BLINDRUNNER 5000
+#define CHANGE_LINETRACE 7150
 
 Operator::Operator( Machine* mcn ) {
     log("Operator constructor");
@@ -17,8 +19,8 @@ Operator::Operator( Machine* mcn ) {
     prevAngL = prevAngR = 0;
     logCnt = 0;	
     courseMapindex =0;
-//    currentMethod = &Operator::lineTrace;
-    currentMethod = &Operator::startRun;
+    currentMethod = &Operator::lineTrace;
+//    currentMethod = &Operator::startRun;
 }
 
 bool Operator::operate()
@@ -85,6 +87,12 @@ void Operator::lineTrace()
     machine->leftMotor->setPWM(pwm_L);
     machine->rightMotor->setPWM(pwm_R);
 	
+    /* 走行距離が5000に到達した場合、blindRunnerへ遷移 */
+    if( CHANGE_LINETRACE > distance ) {
+        if( CHANGE_BLINDRUNNER <= distance ) {
+            currentMethod = &Operator::blindRunner;
+        }
+    }
     if ( mode > 100000 ) {
     currentMethod = NULL;
     } else {
@@ -130,7 +138,7 @@ void Operator::blindRunner()
     machine->rightMotor->setPWM(pwm_R);
 
     /* 走行距離がXXXXに到達した場合、lineTraceへ遷移 */
-    if( 7500 <= distance ) {
+    if( CHANGE_LINETRACE <= distance ) {
         currentMethod = &Operator::lineTrace;
     }
 
