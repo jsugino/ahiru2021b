@@ -12,8 +12,8 @@ Machine::Machine() : loggerDistL("distL"), loggerDistR("distR") {
 
     leftMotor   = new ev3api::Motor(PORT_C);
     rightMotor  = new ev3api::Motor(PORT_B);
-    tailMotor   = new ev3api::Motor(PORT_D);
-    armMotor    = new ArmMotor(PORT_A);
+    tailMotor   = new AngleMotor(PORT_D);
+    armMotor    = new AngleMotor(PORT_A);
 
     touchSensor = new ev3api::TouchSensor(PORT_1);
     sonarSensor = new ev3api::SonarSensor(PORT_2);
@@ -53,7 +53,7 @@ Machine::~Machine() {
     log("Machine destructor");
 }
 
-void ArmMotor::setAngle( int32_t targetAngle )
+void AngleMotor::setAngle( int32_t targetAngle )
 {
     int armSpeed = this->getPWM();
     int32_t armAngle = this->getCount();

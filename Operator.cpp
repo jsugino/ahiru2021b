@@ -19,8 +19,8 @@ Operator::Operator( Machine* mcn ) {
     logCnt = 0;	
     courseMapindex =0;
     slalomStatus = 0;
-    currentMethod = &Operator::slalomOn;
-//    currentMethod = &Operator::lineTrace;
+    currentMethod = &Operator::lineTrace;
+//    currentMethod = &Operator::slalomOn;
 //    currentMethod = &Operator::startRun;
 }
 
@@ -62,13 +62,15 @@ void Operator::lineTrace()
     grayScaleBlueless = (cur_rgb.r * 10 + cur_rgb.g * 217 + cur_rgb.b * 29) / 256;
     //grayScaleBlueless = cur_rgb.r;
 
+    int32_t  dist = machine->distanceL + machine->distanceR;
     int8_t speed;
-    if ( (machine->distanceL + machine->distanceR) < 1000 ) {
-	speed = 40;
-    } else {
-	speed = 70;
-    }
-	
+    if ( dist < 800 ) speed = 40;
+    else if ( dist < 4600 ) speed = 70;
+    else if ( dist < 6200 ) speed = 50;
+    else if ( dist < 8000 ) speed = 70;
+    else if ( dist < 9300 ) speed = 40;
+    else speed = 70;
+
     forward = speed;
     turn = (speed - grayScaleBlueless)*EDGE;
 
@@ -77,6 +79,8 @@ void Operator::lineTrace()
         log("[Operator::lineTrace]grayScaleBlueless=%d,forward=%d,turn=%d",grayScaleBlueless,forward,turn);
     }
 
+    if ( forward+turn >= 100 ) turn = 100-forward;
+    if ( forward-turn >= 100 ) turn = forward-100;
     pwm_L = forward - turn;
     pwm_R = forward + turn;
 
@@ -168,7 +172,7 @@ int16_t calcTurn( int16_t turn, int16_t forward )
 {
     int16_t turnmax;
 
-    turn = (int16_t)(((double)turn)*((double)forward)/50.0);
+    turn = (int16_t)(((double)turn)*((double)forward)/40.0);
     turnmax = ev3api::Motor::PWM_MAX - forward;
     if ( turn < -turnmax ) turn = -turnmax;
     if ( turn > +turnmax ) turn = +turnmax;
@@ -186,7 +190,24 @@ void Operator::slalomOn()
     rgb_raw_t cur_rgb;
     int32_t  distance = machine->distanceL + machine->distanceR;
 
-    // とりあえず、lineTrace と同等の実装をして、難所までたどり着く
+#if 1
+    // 以下のコードは難所のトライ＆エラーをするためのもの
+    // 次のコマンドを実行し、少しだけ lineTrace する。
+    // curl -X POST -H "Content-Type: application/json" -d '{"initLX":"8.0","initLY":"0","initLZ":"15.5","initLROT":"90"}' http://localhost:54000
+    if ( distance < 1000 ) {
+	int16_t forward = 30;
+	machine->colorSensor->getRawColor(cur_rgb);
+	int16_t turn = calcTurn(60-cur_rgb.r,forward)*EDGE;
+	int8_t pwm_L = forward - turn;
+	int8_t pwm_R = forward + turn;
+	machine->leftMotor->setPWM(pwm_L);
+	machine->rightMotor->setPWM(pwm_R);
+	return;
+    }
+#endif
+
+#if 0
+    // 初期状態から lineTrace と同等の実装をして、難所までたどり着く
     // 山中さんのコードができたら、以下は削除する。
     if ( distance < 20000 ) {
 	int16_t forward;      /* 前後進命令 */
@@ -223,6 +244,7 @@ void Operator::slalomOn()
 	return;
     }
     // ここまで。
+#endif
 
     int16_t forward = 10;
     int16_t turn = 0;
@@ -255,7 +277,7 @@ void Operator::slalomOn()
 	}
 	break;
     case 3: // ゆっくりバックする
-	if ( (distance-slalomDistance) > -200 ) {
+	if ( (distance-slalomDistance) > -300 ) {
 	    ++slalomCounter;
 	    forward = -(slalomCounter/10);
 	    if ( forward < -10 ) forward = -10;
@@ -300,13 +322,13 @@ void Operator::slalomOn()
 		{ 100, -15 },
 		{ 150, 0 },
 		{ 100, 15 },
-		{ 300, 0 },
+		{ 400, 0 },
 		{ 100, 15 },
-		{ 150, 0 },
+		{ 350, 0 },
+		{ 100, -15 },
+		{ 200, 0 },
 		{ 100, -15 },
 		{ 300, 0 },
-		{ 100, -15 },
-		{ 150, 0 },
 		{ 100, 15 },
 	    };
 	    for ( int i = 0; i < (sizeof(slalom)/sizeof(Slalom)); ++i ) {

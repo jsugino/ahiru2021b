@@ -16,12 +16,12 @@
 
 #include "Logger.hpp"
 
-class ArmMotor : public ev3api::Motor
+class AngleMotor : public ev3api::Motor
 {
 private:
 protected:
 public:
-    inline ArmMotor( ePortM port ) : Motor(port) {};
+    inline AngleMotor( ePortM port ) : Motor(port) {};
     void setAngle( int32_t targetAngle );
 };
 
@@ -31,8 +31,8 @@ protected:
 public:
     ev3api::Motor*          leftMotor;
     ev3api::Motor*          rightMotor;
-    ArmMotor*               armMotor;
-    ev3api::Motor*          tailMotor;
+    AngleMotor*             armMotor;
+    AngleMotor*             tailMotor;
 
     ev3api::TouchSensor*    touchSensor;
     ev3api::SonarSensor*    sonarSensor;
