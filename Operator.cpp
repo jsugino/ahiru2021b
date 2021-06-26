@@ -14,7 +14,6 @@
 Operator::Operator( Machine* mcn ) {
     log("Operator constructor");
     machine = mcn;
-    mode = 0;
     distance = 0.0;
     prevAngL = prevAngR = 0;
     logCnt = 0;	
@@ -93,11 +92,6 @@ void Operator::lineTrace()
             currentMethod = &Operator::blindRunner;
         }
     }
-    if ( mode > 100000 ) {
-    currentMethod = NULL;
-    } else {
-    ++mode;
-    }
 }
 /* コースマップを使って走る */
 void Operator::blindRunner()
@@ -173,15 +167,16 @@ void Operator::slalomOn()
     machine->leftMotor->setPWM(50);
     machine->rightMotor->setPWM(50);
     if ( (machine->distanceL + machine->distanceR) < 28800 ) {
-	machine->armUp();
+	machine->armMotor->setAngle(-20);
     } else {
-	machine->armDown();
+	machine->armMotor->setAngle(-50);
     }
 
     if ( (machine->distanceL + machine->distanceR) > 31000 ) {
 	currentMethod = NULL;
     }
 }
+
 void Operator::startRun()
 {
     rgb_raw_t cur_rgb;

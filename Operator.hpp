@@ -28,7 +28,6 @@ private:
 #endif /* yamanaka_s */
 protected:
     Machine* machine;
-    int mode;
     void (Operator::*currentMethod)();
 public:
 #if defined(MAKE_RIGHT)

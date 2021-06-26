@@ -16,13 +16,22 @@
 
 #include "Logger.hpp"
 
+class ArmMotor : public ev3api::Motor
+{
+private:
+protected:
+public:
+    inline ArmMotor( ePortM port ) : Motor(port) {};
+    void setAngle( int32_t targetAngle );
+};
+
 class Machine {
 private:
 protected:
 public:
     ev3api::Motor*          leftMotor;
     ev3api::Motor*          rightMotor;
-    ev3api::Motor*          armMotor;
+    ArmMotor*               armMotor;
     ev3api::Motor*          tailMotor;
 
     ev3api::TouchSensor*    touchSensor;
@@ -35,14 +44,7 @@ public:
     Logger loggerDistL;
     Logger loggerDistR;
 
-    int counter;
     int32_t distanceL, distanceR;
-
-    // Arm related definitions
-    int32_t armAngle, targetArmAngle, armDownAngle, armUpAngle;
-    int armSpeed;
-    void armUp();
-    void armDown();
 
     Machine();
     void initialize();

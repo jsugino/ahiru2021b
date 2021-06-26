@@ -13,7 +13,7 @@ Machine::Machine() : loggerDistL("distL"), loggerDistR("distR") {
     leftMotor   = new ev3api::Motor(PORT_C);
     rightMotor  = new ev3api::Motor(PORT_B);
     tailMotor   = new ev3api::Motor(PORT_D);
-    armMotor    = new ev3api::Motor(PORT_A);
+    armMotor    = new ArmMotor(PORT_A);
 
     touchSensor = new ev3api::TouchSensor(PORT_1);
     sonarSensor = new ev3api::SonarSensor(PORT_2);
@@ -26,32 +26,8 @@ Machine::Machine() : loggerDistL("distL"), loggerDistR("distR") {
 // 各種センサーの初期値を取得する。
 void Machine::initialize()
 {
-    counter = 0;
-
     distanceL = leftMotor->getCount();
     distanceR = rightMotor->getCount();
-
-    armAngle = armMotor->getCount();
-    armDownAngle = targetArmAngle = -50;
-    armUpAngle = armDownAngle + 30;
-    armSpeed = 0;
-}
-
-// Arm related operations
-void Machine::armUp()
-{
-    if ( targetArmAngle != armUpAngle ) {
-	log("armUp");
-	targetArmAngle = armUpAngle;
-    }
-}
-
-void Machine::armDown()
-{
-    if ( targetArmAngle != armDownAngle ) {
-	log("armDown");
-	targetArmAngle = armDownAngle;
-    }
 }
 
 bool Machine::detect() {
@@ -59,23 +35,6 @@ bool Machine::detect() {
     distanceR = rightMotor->getCount();
     loggerDistL.logging(distanceL);
     loggerDistR.logging(distanceR);
-
-    if ( (counter % 250) == 0 ) {
-	log("L = %d, R = %d, arm = %d, target = %d",
-	    (int)distanceL,(int)distanceR,(int)armAngle,(int)targetArmAngle);
-    }
-    ++counter;
-
-    if ( armSpeed < 0 ) {
-	if ( armAngle <= targetArmAngle ) armSpeed = 0;
-    } else if ( armSpeed > 0 ) {
-	if ( armAngle >= targetArmAngle ) armSpeed = 0;
-    } else if ( (targetArmAngle+3) < armAngle) {
-	armSpeed = -30;
-    } else if ( (targetArmAngle-3) > armAngle ) {
-	armSpeed = +30;
-    }
-    armMotor->setPWM(armSpeed);
 
     return true;
 }
@@ -92,4 +51,20 @@ Machine::~Machine() {
     delete leftMotor;
 
     log("Machine destructor");
+}
+
+void ArmMotor::setAngle( int32_t targetAngle )
+{
+    int armSpeed = this->getPWM();
+    int32_t armAngle = this->getCount();
+    if ( armSpeed < 0 ) {
+	if ( armAngle <= targetAngle ) armSpeed = 0;
+    } else if ( armSpeed > 0 ) {
+	if ( armAngle >= targetAngle ) armSpeed = 0;
+    } else if ( (targetAngle+3) < armAngle) {
+	armSpeed = -30;
+    } else if ( (targetAngle-3) > armAngle ) {
+	armSpeed = +30;
+    }
+    this->setPWM(armSpeed);
 }

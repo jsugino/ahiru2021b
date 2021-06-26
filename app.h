@@ -13,7 +13,7 @@ extern "C" {
  * Note: It used to be in ms with HRP2 kernel)
  */
 #define PERIOD_OPE_TSK  ( 4 * 1000)
-#define PERIOD_LOG_TSK  ( 4 * 1000)
+#define PERIOD_LOG_TSK  ( 1000 * 1000)
 
 /*
  * Default task stack size in bytes
