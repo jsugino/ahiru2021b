@@ -42,7 +42,11 @@ public:
     ~Operator();
 
     // スラローム用定義
+    int slalomStatus;
+    int32_t slalomCounter;
+    int32_t slalomDistance;
     void slalomOn();
+    void slalomOff();
 };
 struct courseSection {
 	char	id[6];

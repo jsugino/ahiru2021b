@@ -18,14 +18,16 @@ Operator::Operator( Machine* mcn ) {
     prevAngL = prevAngR = 0;
     logCnt = 0;	
     courseMapindex =0;
-    currentMethod = &Operator::lineTrace;
+    slalomStatus = 0;
+    currentMethod = &Operator::slalomOn;
+//    currentMethod = &Operator::lineTrace;
 //    currentMethod = &Operator::startRun;
 }
 
 bool Operator::operate()
 {
     if ( currentMethod == NULL ) return false;
-	this->updateDistance();
+    this->updateDistance();
     (this->*currentMethod)();
     if(LOG == logCnt){
         logCnt = 0;
@@ -162,19 +164,227 @@ void Operator::shortCut() {
 }
 #endif /* yamanaka_s */
 
+int16_t calcTurn( int16_t turn, int16_t forward )
+{
+    int16_t turnmax;
+
+    turn = (int16_t)(((double)turn)*((double)forward)/50.0);
+    turnmax = ev3api::Motor::PWM_MAX - forward;
+    if ( turn < -turnmax ) turn = -turnmax;
+    if ( turn > +turnmax ) turn = +turnmax;
+
+    return turn;
+}
+
+struct Slalom {
+    int32_t distance;
+    int16_t turn;
+};
+
 void Operator::slalomOn()
 {
-    machine->leftMotor->setPWM(50);
-    machine->rightMotor->setPWM(50);
-    if ( (machine->distanceL + machine->distanceR) < 28800 ) {
-	machine->armMotor->setAngle(-20);
-    } else {
-	machine->armMotor->setAngle(-50);
-    }
+    rgb_raw_t cur_rgb;
+    int32_t  distance = machine->distanceL + machine->distanceR;
 
-    if ( (machine->distanceL + machine->distanceR) > 31000 ) {
-	currentMethod = NULL;
+    // とりあえず、lineTrace と同等の実装をして、難所までたどり着く
+    // 山中さんのコードができたら、以下は削除する。
+    if ( distance < 20000 ) {
+	int16_t forward;      /* 前後進命令 */
+
+	if ( distance < 800 ) forward = 30;
+	else if ( distance < 4600 ) forward = 70;
+	else if ( distance < 6200 ) forward = 50;
+	else if ( distance < 8000 ) forward = 70;
+	else if ( distance < 9300 ) forward = 40;
+	else if ( distance < 13700 ) forward = 75;
+	else if ( distance < 14400+1000 ) forward = 50;
+	else if ( distance < 17300 ) forward = 75;
+	else if ( distance < 19100 ) forward = 40;
+	else if ( distance < 20000 ) forward = 30;
+	else forward = 10;
+
+	int edge;
+	if ( distance < 18200 ) {
+	    edge = -EDGE; // 逆エッジ
+	} else if ( distance < 18480 ) {
+	    // この期間だけ直進
+	    machine->leftMotor->setPWM(forward);
+	    machine->rightMotor->setPWM(forward);
+	    return;
+	} else {
+	    edge = EDGE; // 正エッジ
+	}
+	machine->colorSensor->getRawColor(cur_rgb);
+	int16_t turn = calcTurn(60-cur_rgb.r,forward)*edge;
+	int8_t pwm_L = forward - turn;
+	int8_t pwm_R = forward + turn;
+	machine->leftMotor->setPWM(pwm_L);
+	machine->rightMotor->setPWM(pwm_R);
+	return;
     }
+    // ここまで。
+
+    int16_t forward = 10;
+    int16_t turn = 0;
+    int32_t base;
+
+    switch ( slalomStatus ) {
+    case 0: // initial state
+	slalomCounter = 0;
+	++slalomStatus;
+	log("[Operator::slalomOn] 姿勢を揃える");
+	break;
+    case 1: // 板にぶつかり続けて、姿勢を揃える
+	if ( ++slalomCounter < 1000 ) {
+	    // Do Nothing
+	} else {
+	    ++slalomStatus;
+	    slalomCounter = 0;
+	    log("[Operator::slalomOn] ゆっくり停止する");
+	}
+	break;
+    case 2: // ゆっくり停止する
+	if ( ++slalomCounter < 500 ) {
+	    forward -= (slalomCounter/10);
+	    if ( forward < 0 ) forward = 0;
+	} else {
+	    ++slalomStatus;
+	    slalomDistance = distance;
+	    slalomCounter = 0;
+	    log("[Operator::slalomOn] ゆっくりバックする");
+	}
+	break;
+    case 3: // ゆっくりバックする
+	if ( (distance-slalomDistance) > -200 ) {
+	    ++slalomCounter;
+	    forward = -(slalomCounter/10);
+	    if ( forward < -10 ) forward = -10;
+	} else {
+	    ++slalomStatus;
+	    slalomCounter = 0;
+	    log("[Operator::slalomOn] アームを上げつつつ前進する");
+	}
+	break;
+    case 4: // アームを上げつつつ前進する
+	if ( (distance-slalomDistance) < 300 ) {
+	    machine->armMotor->setAngle(-20);
+	    ++slalomCounter;
+	    forward = (slalomCounter/10);
+#define ARMUPSPEED 50
+	    if ( forward > ARMUPSPEED ) forward = ARMUPSPEED;
+	} else {
+	    ++slalomStatus;
+	    slalomCounter = 0;
+	    log("[Operator::slalomOn] アームをおろしつつ減速しライントレースする");
+	}
+	break;
+    case 5: // アームをおろしつつ減速しライントレースする
+#define ARMDOWNDIST 900
+	if ( (distance-slalomDistance) < ARMDOWNDIST ) {
+	    machine->armMotor->setAngle(-50);
+	    ++slalomCounter;
+	    forward = ARMUPSPEED - (slalomCounter/10);
+	    if ( forward < 10 ) forward = 10;
+	    machine->colorSensor->getRawColor(cur_rgb);
+	    turn = calcTurn(30-cur_rgb.r,forward)*EDGE;
+	} else {
+	    ++slalomStatus;
+	    slalomCounter = 0;
+	    log("[Operator::slalomOn] スラロームする");
+	}
+	break;
+    case 6: // スラロームする
+	base = ARMDOWNDIST;
+	if ( (distance-slalomDistance) < 3000 ) {
+	    struct Slalom slalom[] = {
+		{ 100, -15 },
+		{ 150, 0 },
+		{ 100, 15 },
+		{ 300, 0 },
+		{ 100, 15 },
+		{ 150, 0 },
+		{ 100, -15 },
+		{ 300, 0 },
+		{ 100, -15 },
+		{ 150, 0 },
+		{ 100, 15 },
+	    };
+	    for ( int i = 0; i < (sizeof(slalom)/sizeof(Slalom)); ++i ) {
+		base += slalom[i].distance;
+		if ( (distance-slalomDistance) < base ) {
+		    turn = slalom[i].turn;
+		    break;
+		}
+	    }
+	} else {
+	    ++slalomStatus;
+	    slalomCounter = 0;
+	    log("[Operator::slalomOn] スラローム前半終了");
+	}
+	break;
+    case 7: // スラローム前半終了
+	slalomStatus = 0;
+	currentMethod = &Operator::slalomOff;
+	return;
+    }
+    int8_t pwm_L = forward - turn;
+    int8_t pwm_R = forward + turn;
+    machine->leftMotor->setPWM(pwm_L);
+    machine->rightMotor->setPWM(pwm_R);
+}
+
+void Operator::slalomOff()
+{
+    int16_t forward = 10;
+    int16_t turn = 0;
+    int32_t base;
+    rgb_raw_t cur_rgb;
+
+    int32_t  distance = machine->distanceL + machine->distanceR;
+
+    switch ( slalomStatus ) {
+    case 0: // initial state
+	slalomCounter = 0;
+	++slalomStatus;
+	log("[Operator::slalomOff] 黒線を探す");
+	break;
+    case 1: // 黒線を探す
+	machine->colorSensor->getRawColor(cur_rgb);
+	if ( (cur_rgb.r + cur_rgb.g + cur_rgb.b) < 30 ) {
+	    ++slalomStatus;
+	    log("[Operator::slalomOff] 90度回転する");
+	    slalomCounter = machine->distanceL;
+	}
+	break;
+    case 2: // 90度回転する
+	if ( (machine->distanceL - slalomCounter) < 15 ) {
+	    forward = 0;
+	    turn = -5;
+	} else {
+	    slalomCounter = 0;
+	    ++slalomStatus;
+	    log("[Operator::slalomOff] ライントレースする");
+	}
+	break;
+    case 3: // ライントレースする
+	if ( (distance-slalomDistance) < 5000 ) {
+	    machine->colorSensor->getRawColor(cur_rgb);
+	    turn = calcTurn(30-cur_rgb.r,forward)*EDGE;
+	} else {
+	    ++slalomStatus;
+	    slalomCounter = 0;
+	    log("[Operator::slalomOn] スラローム後半終了");
+	}
+	break;
+    case 4: // スラローム後半終了
+	slalomStatus = 0;
+	currentMethod = NULL;
+	return;
+    }
+    int8_t pwm_L = forward - turn;
+    int8_t pwm_R = forward + turn;
+    machine->leftMotor->setPWM(pwm_L);
+    machine->rightMotor->setPWM(pwm_R);
 }
 
 void Operator::startRun()
