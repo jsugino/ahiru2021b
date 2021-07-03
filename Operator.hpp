@@ -10,6 +10,19 @@
 #include "Machine.hpp"
 #include "ahiru_common.hpp"
 
+// 台形制御用のクラス
+class RampControler {
+private:
+    int16_t target;
+    int16_t current;
+    int16_t counter;
+    int16_t ratioA;
+    int16_t ratioB;
+public:
+    RampControler( double ratio );
+    int16_t calc( int16_t target );
+};
+
 class Operator {
 private:
 #if 1 /* yamanaka_s */
@@ -42,12 +55,14 @@ public:
     ~Operator();
 
     // スラローム用定義
+    RampControler speed;
     int slalomStatus;
     int32_t slalomCounter;
     int32_t slalomDistance;
     void slalomOn();
     void slalomOff();
 };
+
 struct courseSection {
 	char	id[6];
 	int32_t sectionEnd;
