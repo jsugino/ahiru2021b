@@ -30,8 +30,10 @@ private:
 	int32_t		prevAngL, prevAngR;
 	int32_t		logCnt;
     int32_t     courseMapindex;	
-    /* ショートカット */
-    void shortCut();
+    /* トライ＆エラー用のプログラム */
+    void lineTraceDummy();
+    void slalomOnPrep();
+    void reverseEdge();
     /* コースマップを使って走る */
     void blindRunner();
     /* 走行開始 */

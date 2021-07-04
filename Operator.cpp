@@ -50,10 +50,10 @@ Operator::Operator( Machine* mcn ) : speed(0.1) {
     logCnt = 0;	
     courseMapindex =0;
     slalomStatus = 0;
-    currentMethod = &Operator::lineTrace;
-//    currentMethod = &Operator::slalomOn;
-//    currentMethod = &Operator::slalomOff;
-//    currentMethod = &Operator::startRun;
+    currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
+    //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
+    //currentMethod = &Operator::slalomOnPrep; // 難所「板の前半」攻略用
+    //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
 }
 
 bool Operator::operate()
@@ -175,30 +175,6 @@ void Operator::blindRunner()
     }
 
 }
-#if 1 /* yamanaka_s */
-void Operator::shortCut() {
-
-    // 杉野より、山中さんへ、
-    // 以下には、とりあえず lineTrace と同じ動作をするプログラムを入れておきます。
-    // 正しく shortCut して、難所に入る直前に slalomOn に制御を渡してください。
-
-    // 【ここから】
-    rgb_raw_t cur_rgb;
-    machine->colorSensor->getRawColor(cur_rgb);
-    int16_t grayScaleBlueless = cur_rgb.r;
-    int8_t forward = 60;
-    int8_t turn = (60 - grayScaleBlueless)*EDGE;
-    int8_t pwm_L = forward - turn;
-    int8_t pwm_R = forward + turn;
-
-    machine->leftMotor->setPWM(pwm_L);
-    machine->rightMotor->setPWM(pwm_R);
-    if ( (machine->distanceL + machine->distanceR) > 28000 ) {
-	currentMethod = &Operator::slalomOn;
-    }
-    // 【ここまで】
-}
-#endif /* yamanaka_s */
 
 int16_t calcTurn( int16_t turn, int16_t forward )
 {
@@ -217,12 +193,14 @@ struct Slalom {
     int16_t turn;
 };
 
-void Operator::slalomOn()
+// 目的：山中さんの固定走行プログラムができるまでの通常走行のみ版
+// 処理内容：初期状態から、通常どおりライントレースし難所直前までたどり着く
+// ロボの初期位置：初期状態
+void Operator::lineTraceDummy()
 {
     rgb_raw_t cur_rgb;
     int32_t  distance = machine->distanceL + machine->distanceR;
 
-#if 1
     // 最初から左エッジでライントレースする。
     // 山中さんのコードができたら、削除する。
     if ( distance < 28500 ) {
@@ -254,14 +232,21 @@ void Operator::slalomOn()
 	int8_t pwm_R = forward + turn;
 	machine->leftMotor->setPWM(pwm_L);
 	machine->rightMotor->setPWM(pwm_R);
-	return;
+    } else {
+	slalomStatus = 0;
+	currentMethod = &Operator::slalomOn;
     }
-#endif
+}
 
-#if 0
-    // 以下のコードは難所のトライ＆エラーをするためのもの
-    // 次のコマンドを実行し、少しだけ lineTrace する。
-    // curl -X POST -H "Content-Type: application/json" -d '{"initLX":"8.0","initLY":"0","initLZ":"15.5","initLROT":"90"}' http://localhost:54000
+// 目的：難所「板の前半」のトライ＆エラーをするためのもの
+// 処理内容：難所の直前から、板にぶつかるまでライントレースする。
+// ロボの初期位置：次のコマンドでを難所の直前に配置する。
+// curl -X POST -H "Content-Type: application/json" -d '{"initLX":"8.0","initLY":"0","initLZ":"15.5","initLROT":"90"}' http://localhost:54000
+void Operator::slalomOnPrep()
+{
+    rgb_raw_t cur_rgb;
+    int32_t  distance = machine->distanceL + machine->distanceR;
+
     if ( distance < 1000 ) {
 	int16_t forward = 30;
 	machine->colorSensor->getRawColor(cur_rgb);
@@ -270,13 +255,20 @@ void Operator::slalomOn()
 	int8_t pwm_R = forward + turn;
 	machine->leftMotor->setPWM(pwm_L);
 	machine->rightMotor->setPWM(pwm_R);
-	return;
+    } else {
+	slalomStatus = 0;
+	currentMethod = &Operator::slalomOn;
     }
-#endif
+}
 
-#if 0
-    // 初期状態から lineTrace と同等の実装をして、難所までたどり着く
-    // 山中さんのコードができたら、以下は削除する。
+// 目的：逆エッジを使った走行を試して見るためのもの
+// 処理内容：初期状態から、逆エッジを使ってライントレースし難所直前までたどり着く
+// ロボの初期位置：初期状態
+void Operator::reverseEdge()
+{
+    rgb_raw_t cur_rgb;
+    int32_t  distance = machine->distanceL + machine->distanceR;
+
     if ( distance < 20000 ) {
 	int16_t forward;      /* 前後進命令 */
 
@@ -309,10 +301,16 @@ void Operator::slalomOn()
 	int8_t pwm_R = forward + turn;
 	machine->leftMotor->setPWM(pwm_L);
 	machine->rightMotor->setPWM(pwm_R);
-	return;
+    } else {
+	slalomStatus = 0;
+	currentMethod = &Operator::slalomOn;
     }
-    // ここまで。
-#endif
+}
+
+void Operator::slalomOn()
+{
+    rgb_raw_t cur_rgb;
+    int32_t  distance = machine->distanceL + machine->distanceR;
 
     int16_t forward = 10;
     int16_t turn = 0;
@@ -425,7 +423,7 @@ void Operator::slalomOn()
 	    for ( int i = 0; i < (sizeof(slalom)/sizeof(Slalom)); ++i ) {
 		base += slalom[i].distance;
 		if ( (distance-slalomDistance) < base ) {
-		    turn = slalom[i].turn;
+		    turn = slalom[i].turn*EDGE;
 		    break;
 		}
 	    }
@@ -447,7 +445,10 @@ void Operator::slalomOn()
 }
 
 // slalomOff() からスタートする場合は、次のコマンドを実行する。
+// 左コース用：
 // curl -X POST -H "Content-Type: application/json" -d '{"initLX":"22.0","initLY":"0.1","initLZ":"15.2","initLROT":"90"}' http://localhost:54000
+// 右コース用：
+// curl -X POST -H "Content-Type: application/json" -d '{"initRX":"-22.0","initRY":"0.1","initRZ":"15.2","initRROT":"270"}' http://localhost:54000
 void Operator::slalomOff()
 {
     int16_t forward = 10;
@@ -474,7 +475,7 @@ void Operator::slalomOff()
     case 2: // 90度回転する
 	if ( (distance-slalomDistance) < 60 ) {
 	    forward = 1;
-	    turn = -5;
+	    turn = -5*EDGE;
 	} else {
 	    slalomCounter = 0;
 	    ++slalomStatus;
@@ -538,6 +539,7 @@ void Operator::slalomOff()
     machine->rightMotor->setPWM(pwm_R);
 }
 
+// もう不要！？
 void Operator::startRun()
 {
     rgb_raw_t cur_rgb;
