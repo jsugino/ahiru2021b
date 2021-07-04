@@ -20,6 +20,7 @@ private:
     int16_t ratioB;
 public:
     RampControler( double ratio );
+    void reset( int16_t tar, int16_t cur );
     int16_t calc( int16_t target );
 };
 
@@ -57,10 +58,12 @@ public:
     ~Operator();
 
     // スラローム用定義
+    RampControler azimuth;
     RampControler speed;
     int slalomStatus;
     int32_t slalomCounter;
     int32_t slalomDistance;
+    int32_t slalomAngle;
     void slalomOn();
     void slalomOff();
 };
