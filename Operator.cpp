@@ -11,11 +11,23 @@
 #define CHANGE_BLINDRUNNER 5000
 #define CHANGE_LINETRACE 7150
 
-RampControler::RampControler( double ratio )
+RampControler::RampControler()
 {
     target = 0;
     current = 0;
     counter = 0;
+    ratioA = 1;
+    ratioB = 1;
+}
+
+void RampControler::reset( int16_t cur )
+{
+    target = cur;
+    current = cur;
+}
+
+void RampControler::ratio( double ratio )
+{
     ratioA = 1;
     ratioB = 1;
     if ( ratio >= 1.0 ) {
@@ -42,13 +54,46 @@ int16_t RampControler::calc( int16_t newtarget )
     return current;
 }
 
-void RampControler::reset( int16_t tar, int16_t cur )
+Ramp2Controler::Ramp2Controler()
 {
-    target = tar;
-    current = cur;
+    maxspeed = 0;
 }
 
-Operator::Operator( Machine* mcn ) : speed(0.1),azimuth(0.5) {
+void Ramp2Controler::reset( int16_t ofs )
+{
+    speed.reset(0);
+    offset = ofs;
+}
+
+void Ramp2Controler::ratio( double ratio, int16_t max )
+{
+    speed.ratio(ratio);
+    maxspeed = max;
+}
+
+int16_t Ramp2Controler::calc( int16_t current, int16_t newtarget )
+{
+    current -= offset;
+    if ( current == newtarget ) {
+	speed.reset(0);
+	return 0;
+    }
+    if ( newtarget > current ) {
+	if ( (newtarget-current) > speed.getCurrent()*speed.getCurrent() ) {
+	    return speed.calc(-maxspeed);
+	} else {
+	    return speed.calc(0);
+	}
+    } else {
+	if ( (current-newtarget) > speed.getCurrent()*speed.getCurrent() ) {
+	    return speed.calc(maxspeed);
+	} else {
+	    return speed.calc(0);
+	}
+    }
+}
+
+Operator::Operator( Machine* mcn ) {
     log("Operator constructor");
     machine = mcn;
     distance = 0.0;
@@ -56,6 +101,8 @@ Operator::Operator( Machine* mcn ) : speed(0.1),azimuth(0.5) {
     logCnt = 0;	
     courseMapindex =0;
     slalomStatus = 0;
+    speed.ratio(0.1);
+    azimuth.ratio(0.5,20);
     currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
     //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
     //currentMethod = &Operator::slalomOnPrep; // 難所「板の前半」攻略用
@@ -337,7 +384,7 @@ void Operator::slalomOn()
 	} else {
 	    ++slalomStatus;
 	    slalomCounter = 0;
-	    speed.reset(PUSHSPEED,PUSHSPEED);
+	    speed.reset(PUSHSPEED);
 	    log("[Operator::slalomOn] 停止する");
 	}
 	break;
@@ -401,8 +448,7 @@ void Operator::slalomOn()
 	    machine->colorSensor->getRawColor(cur_rgb);
 	    turn = calcTurn(30-cur_rgb.r,forward)*EDGE;
 	} else {
-	    slalomAngle = angle; // 角度のリセット
-	    azimuth.reset(0,0);
+	    azimuth.reset(angle); // 角度のリセット
 	    ++slalomStatus;
 	    slalomCounter = 0;
 	    log("[Operator::slalomOn] スラロームする");
@@ -410,7 +456,7 @@ void Operator::slalomOn()
 	break;
     case 8: // スラロームする
 	base = SLALOMDIST;
-	if ( (distance-slalomDistance) < 2900 ) {
+	if ( (distance-slalomDistance) < 2800 ) {
 	    struct Slalom slalom[] = { /* ★距離と方角(260 count = 90度)を調整する */
 		{ 330, 120 },  // 右に移動
 		{ 240, 0 },    // 直進
@@ -422,7 +468,7 @@ void Operator::slalomOn()
 	    for ( int i = 0; i < (sizeof(slalom)/sizeof(Slalom)); ++i ) {
 		base += slalom[i].distance;
 		if ( (distance-slalomDistance) < base ) {
-		    turn = azimuth.calc(slalom[i].angle-(angle-slalomAngle))*EDGE/-4;
+		    turn = azimuth.calc(angle,slalom[i].angle)*EDGE;
 		    break;
 		}
 	    }
@@ -465,10 +511,8 @@ void Operator::slalomOff()
 	log("[Operator::slalomOff] 少し左回転");
 	break;
     case 1: // 少し左回転
-#define ABITANGLE -50
-	if ( (angle-slalomAngle) > (ABITANGLE+5) ) {
-	    turn = azimuth.calc(ABITANGLE-(angle-slalomAngle))*EDGE/-4;
-	} else {
+	turn = azimuth.calc(angle,-50)*EDGE;
+	if ( turn == 0 ) {
 	    ++slalomStatus;
 	    slalomCounter = 0;
 	    log("[Operator::slalomOff] 黒線を探す");
@@ -496,7 +540,7 @@ void Operator::slalomOff()
 	    ++slalomStatus;
 	    slalomCounter = 0;
 	    slalomDistance = distance; // 距離をリセットする
-	    speed.reset(forward,forward);
+	    speed.reset(forward);
 	    log("[Operator::slalomOff] 少しバックしつつ角度調整する");
 	}
 	break;
@@ -506,15 +550,15 @@ void Operator::slalomOff()
 	} else {
 	    ++slalomStatus;
 	    slalomCounter = 0;
-	    azimuth.reset(0,0);
+	    azimuth.reset(angle);
+	    //azimuth.ratio(0.3);
 	    log("[Operator::slalomOn] 約90度回転する");
 	}
 	break;
     case 6: // 約90度回転する
-	if ( (angle-slalomAngle) < 260 ) { // 260 count = 90度
-	    forward = speed.calc(0);
-	    turn = azimuth.calc(-5)*EDGE;
-	} else {
+	turn = azimuth.calc(angle,260)*EDGE; // 260 count = 90度
+	forward = speed.calc(0);
+	if ( turn == 0 ) {
 	    slalomCounter = 0;
 	    ++slalomStatus;
 	    log("[Operator::slalomOff] スラロームする");
@@ -522,16 +566,16 @@ void Operator::slalomOff()
 	break;
     case 7: // スラロームする
 	base = 0;
-	if ( (distance-slalomDistance) < 1000 ) {
+	if ( (distance-slalomDistance) < 1100 ) {
 	    struct Slalom slalom[] = { /* ★距離と方角(260 count = 90度)を調整する */
-		{ 350, 260+0 },   // 直進
-		{ 500, 260+150 }, // 右に移動
+		{ 400, 260+0 },   // 直進
+		{ 450, 260+150 }, // 右に移動
 		{9999, 260+0 },   // 直進
 	    };
 	    for ( int i = 0; i < (sizeof(slalom)/sizeof(Slalom)); ++i ) {
 		base += slalom[i].distance;
 		if ( (distance-slalomDistance) < base ) {
-		    turn = azimuth.calc(slalom[i].angle-(angle-slalomAngle))*EDGE/-4;
+		    turn = azimuth.calc(angle,slalom[i].angle)*EDGE;
 		    break;
 		}
 	    }
@@ -542,9 +586,10 @@ void Operator::slalomOff()
 	}
 	break;
     case 8: // ライントレースせずに加速してアームを上げる
-	if ( (distance-slalomDistance) < 1500 ) {
+	if ( (distance-slalomDistance) < 1600 ) {
 	    machine->armMotor->setAngle(-20);
 	    forward = speed.calc(30);
+	    turn = 0;
 	} else {
 	    ++slalomStatus;
 	    slalomCounter = 0;
@@ -552,17 +597,73 @@ void Operator::slalomOff()
 	}
 	break;
     case 9: // ライントレースせずに停止してアームを下げる
-	if ( (distance-slalomDistance) < 2000 ) {
-	    machine->armMotor->setAngle(-50);
-	    forward = speed.calc(0);
-	    turn = azimuth.calc(260-(angle-slalomAngle))*EDGE/-4;
-	} else {
+	machine->armMotor->setAngle(-50);
+	forward = speed.calc(0);
+	turn = 0;
+	if ( forward == 0 ) {
+	    ++slalomStatus;
+	    slalomCounter = 0;
+	    //azimuth.ratio(0.5);
+	    log("[Operator::slalomOff] ブロックの方に向く");
+	}
+	break;
+    case 10: // ブロックの方に向く
+	forward = 0;
+	turn = azimuth.calc(angle,520)*EDGE;
+	if ( turn == 0 ) {
 	    ++slalomStatus;
 	    slalomCounter = 0;
 	    log("[Operator::slalomOff] スラローム後半終了");
 	}
 	break;
-    case 10: // スラローム後半終了
+    case 11: // スラローム後半終了
+	slalomStatus = 0;
+	currentMethod = &Operator::catchBlock;
+	return;
+    }
+    int8_t pwm_L = forward - turn;
+    int8_t pwm_R = forward + turn;
+    machine->leftMotor->setPWM(pwm_L);
+    machine->rightMotor->setPWM(pwm_R);
+}
+
+void Operator::catchBlock()
+{
+    int16_t forward = 10;
+    int16_t turn = 0;
+    int32_t base;
+    rgb_raw_t cur_rgb;
+
+    int32_t  distance = machine->distanceL + machine->distanceR;
+    int32_t  angle = machine->distanceL - machine->distanceR;
+    switch ( slalomStatus ) {
+    case 0: // initial state
+	slalomCounter = 0;
+	++slalomStatus;
+	log("[Operator::slalomOff] １つめの黒線を見つけるまで進む");
+	break;
+    case 1: // １つめの黒線を見つけるまで進む
+	forward = speed.calc(20);
+	turn = azimuth.calc(angle,520)*EDGE;
+	machine->colorSensor->getRawColor(cur_rgb);
+	if ( (cur_rgb.r + cur_rgb.g + cur_rgb.b) > 30 ) {
+	    slalomCounter = 0;
+	} else if ( ++slalomCounter > 10 ) {
+	    slalomCounter = 0;
+	    ++slalomStatus;
+	    log("[Operator::slalomOff] 停止する");
+	}
+	break;
+    case 2: // 停止する
+	forward = speed.calc(0);
+	turn = 0;
+	if ( forward == 0 ) {
+	    slalomCounter = 0;
+	    ++slalomStatus;
+	    log("[Operator::slalomOff] キャッチブロック終了");
+	}
+	break;
+    case 3: // キャッチブロック終了
 	slalomStatus = 0;
 	currentMethod = NULL;
 	return;

@@ -10,7 +10,7 @@
 #include "Machine.hpp"
 #include "ahiru_common.hpp"
 
-// 台形制御用のクラス
+// １次の台形制御のクラス
 class RampControler {
 private:
     int16_t target;
@@ -19,9 +19,24 @@ private:
     int16_t ratioA;
     int16_t ratioB;
 public:
-    RampControler( double ratio );
-    void reset( int16_t tar, int16_t cur );
-    int16_t calc( int16_t target );
+    RampControler();
+    void reset( int16_t cur );
+    void ratio( double ratio );
+    int16_t calc( int16_t newtarget );
+    int16_t getCurrent() { return current; }
+};
+
+// ２次の台形制御のクラス
+class Ramp2Controler {
+private:
+    RampControler speed;
+    int16_t maxspeed;
+    int16_t offset;
+public:
+    Ramp2Controler();
+    void reset( int16_t ofs );
+    void ratio( double ratio, int16_t max );
+    int16_t calc( int16_t current, int16_t newtarget );
 };
 
 class Operator {
@@ -57,15 +72,15 @@ public:
     void lineTrace();
     ~Operator();
 
-    // スラローム用定義
-    RampControler azimuth;
+    // 難所攻略用定義
+    Ramp2Controler azimuth;
     RampControler speed;
     int slalomStatus;
     int32_t slalomCounter;
     int32_t slalomDistance;
-    int32_t slalomAngle;
     void slalomOn();
     void slalomOff();
+    void catchBlock();
 };
 
 struct courseSection {
