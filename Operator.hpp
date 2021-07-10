@@ -10,35 +10,6 @@
 #include "Machine.hpp"
 #include "ahiru_common.hpp"
 
-// １次の台形制御のクラス
-class RampControler {
-private:
-    int16_t target;
-    int16_t current;
-    int16_t counter;
-    int16_t ratioA;
-    int16_t ratioB;
-public:
-    RampControler();
-    void reset( int16_t cur );
-    void ratio( double ratio );
-    int16_t calc( int16_t newtarget );
-    int16_t getCurrent() { return current; }
-};
-
-// ２次の台形制御のクラス
-class Ramp2Controler {
-private:
-    RampControler speed;
-    int16_t maxspeed;
-    int16_t offset;
-public:
-    Ramp2Controler();
-    void reset( int16_t ofs );
-    void ratio( double ratio, int16_t max );
-    int16_t calc( int16_t current, int16_t newtarget );
-};
-
 class Operator {
 private:
 #if 1 /* yamanaka_s */
@@ -73,8 +44,6 @@ public:
     ~Operator();
 
     // 難所攻略用定義
-    Ramp2Controler azimuth;
-    RampControler speed;
     int slalomStatus;
     int32_t slalomCounter;
     int32_t slalomDistance;

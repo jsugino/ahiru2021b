@@ -25,12 +25,46 @@ public:
     void setAngle( int32_t targetAngle );
 };
 
+// １次の台形制御のクラス
+class RampControler {
+private:
+    int target;
+    int current;
+    int counter;
+    int ratioA;
+    int ratioB;
+public:
+    RampControler();
+    void reset( int cur );
+    void ratio( double ratio );
+    int calc( int newtarget );
+    int getCurrent() { return current; }
+    int getTarget() { return target; }
+};
+
+// ２次の台形制御のクラス
+class Ramp2Controler {
+private:
+    RampControler speed;
+    int maxspeed;
+    int offset;
+public:
+    Ramp2Controler();
+    void reset( int ofs );
+    void resetSpeed( int spd );
+    void ratio( double ratio, int max );
+    int calc( int current, int newtarget );
+    int getTarget() { return speed.getTarget(); }
+#define ERROR 5 // 許容誤差
+    bool inTarget( int diff );
+};
+
 class Machine {
 private:
-protected:
-public:
     ev3api::Motor*          leftMotor;
     ev3api::Motor*          rightMotor;
+protected:
+public:
     AngleMotor*             armMotor;
     AngleMotor*             tailMotor;
 
@@ -41,10 +75,11 @@ public:
 
     ev3api::Clock*          clock;
 
-    Logger loggerDistL;
-    Logger loggerDistR;
-
     int32_t distanceL, distanceR;
+
+    RampControler           speed;
+    Ramp2Controler          azimuth;
+    void moveDirect( int forward, int turn );
 
     Machine();
     void initialize();
