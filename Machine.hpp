@@ -28,7 +28,6 @@ public:
 // １次の台形制御のクラス
 class RampControler {
 private:
-    int target;
     int current;
     int counter;
     int ratioA;
@@ -39,7 +38,6 @@ public:
     void ratio( double ratio );
     int calc( int newtarget );
     int getCurrent() { return current; }
-    int getTarget() { return target; }
 };
 
 // ２次の台形制御のクラス
@@ -47,22 +45,20 @@ class Ramp2Controler {
 private:
     RampControler speed;
     int maxspeed;
-    int offset;
 public:
     Ramp2Controler();
-    void reset( int ofs );
-    void resetSpeed( int spd );
+    void reset( int speed );
+    void resetSpeed( int spd ) { speed.reset(spd); }
     void ratio( double ratio, int max );
-    int calc( int current, int newtarget );
-    int getTarget() { return speed.getTarget(); }
-#define ERROR 5 // 許容誤差
-    bool inTarget( int diff );
+    int calc( int target );
 };
 
 class Machine {
 private:
     ev3api::Motor*          leftMotor;
     ev3api::Motor*          rightMotor;
+    bool		    isGetRGB;
+    rgb_raw_t               cur_rgb;
 protected:
 public:
     AngleMotor*             armMotor;
@@ -80,6 +76,9 @@ public:
     RampControler           speed;
     Ramp2Controler          azimuth;
     void moveDirect( int forward, int turn );
+
+    rgb_raw_t* getRawRGB();
+    int getRGB( int ratioR = 1, int ratioG = 1, int ratioB = 1, bool average = false );
 
     Machine();
     void initialize();

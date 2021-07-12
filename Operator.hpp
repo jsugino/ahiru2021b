@@ -10,6 +10,14 @@
 #include "Machine.hpp"
 #include "ahiru_common.hpp"
 
+class LineTraceLogic
+{
+public:
+    virtual int calcTurn( rgb_raw_t* rgb, int speed ) = 0;
+protected:
+    virtual ~LineTraceLogic() = 0;
+};
+
 class Operator {
 private:
 #if 1 /* yamanaka_s */
@@ -44,12 +52,69 @@ public:
     ~Operator();
 
     // 難所攻略用定義
-    int slalomStatus;
+private:
+    int sequenceNumber;
+    int slalomMessagedStatus;
     int32_t slalomCounter;
     int32_t slalomDistance;
+    int32_t slalomAzimuth;
+    int32_t slalomPreviousDistance;
+public:
+    // Status : 現在の処理番号
+    int getSequenceNumber() { return sequenceNumber; }
+
+    // Counter : この処理番号の実行回数 (０オリジン)
+    int getCounter() { return slalomCounter; }
+
+    // Current Task : 現在の処理内容
+    void currentTask( const char* const message );
+
+    // Goto Next Status : 次の処理番号に進む
+    void nextSequence( int falgs = 0 );
+    // flags には次のものが指定可能
+    const int DIST = 1;    // 距離をリセットする (markCheckPoint() をする)
+    const int AZIMUTH = 2; // 方角をリセットする (resetAzimuth() をする)
+    // 複数のフラグを同時に設定する場合は、次のように | で指定する。
+    // nextSequence(DIST|ANGLE);
+
+    // Goto Next Method
+    void nextMethod( void (Operator::*nextMethod)() );
+
+    // Absolute Distance : 開始位置からの角度
+    int32_t getAbsAzimuth() { return machine->distanceL - machine->distanceR; }
+
+    // Relative Azimuth : リセット時からの相対方角
+    int32_t getAzimuth() { return getAbsAzimuth() - slalomAzimuth; }
+
+    // Reset Azimuth : 方角をリセットする
+    void resetAzimuth() { slalomAzimuth = getAbsAzimuth(); }
+
+    // Absolute Distance : 開始位置からの距離
+    int32_t getAbsDistance() { return machine->distanceL + machine->distanceR; }
+
+    // Distance from Check Point : 一つ前のチェックポイントからの距離
+    int32_t getCPDistance() { return getAbsDistance() - slalomDistance; }
+
+    // Mark Check Point : チェックポイントをマークする
+    void markCheckPoint() { slalomDistance = getAbsDistance(); }
+
+    // Relative Distance : 直前のシーケンスからの距離
+    int32_t getRelDistance() { return getAbsDistance() - slalomPreviousDistance; }
+
+    // 指定された速度で直進する。返り値は台形制御後の速度
+    int moveAt( int spd );
+
+    // 指定された速度で、指定された方位に曲がる。返り値は台形制御後の角速度
+    int curveTo( int spd, int azi );
+
+    // ライントレース用メソッド
+    int lineTraceAt( int spd, LineTraceLogic* logic );
+
+    // 難所攻略用メソッド
     void slalomOn();
     void slalomOff();
-    void catchBlock();
+    void moveToBlock();
+    void moveToGarage();
 };
 
 struct courseSection {

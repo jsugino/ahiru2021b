@@ -35,6 +35,7 @@ void Machine::initialize()
 bool Machine::detect() {
     distanceL = leftMotor->getCount();
     distanceR = rightMotor->getCount();
+    isGetRGB = false;
 
     return true;
 }
@@ -45,6 +46,23 @@ void Machine::moveDirect( int forward, int turn )
     int pwm_R = forward + turn;
     leftMotor->setPWM(pwm_L);
     rightMotor->setPWM(pwm_R);
+}
+
+rgb_raw_t* Machine::getRawRGB()
+{
+    if ( !isGetRGB ) {
+	colorSensor->getRawColor(cur_rgb);
+	isGetRGB = true;
+    }
+    return &cur_rgb;
+}
+
+int Machine::getRGB( int ratioR, int ratioG, int ratioB, bool average )
+{
+    getRawRGB();
+    int total = cur_rgb.r * ratioR + cur_rgb.g * ratioG + cur_rgb.b * ratioB;
+    if ( average ) total /= ratioR + ratioG + ratioB;
+    return total;
 }
 
 Machine::~Machine() {
@@ -63,7 +81,6 @@ Machine::~Machine() {
 
 RampControler::RampControler()
 {
-    target = 0;
     current = 0;
     counter = 0;
     ratioA = 1;
@@ -72,34 +89,29 @@ RampControler::RampControler()
 
 void RampControler::reset( int cur )
 {
-    target = cur;
     current = cur;
 }
 
 void RampControler::ratio( double ratio )
 {
-    ratioA = 1;
-    ratioB = 1;
     if ( ratio >= 1.0 ) {
-	ratioA = ratio;
+	ratioA = (int)ratio;
+	ratioB = 1;
     } else {
-	ratioB = 1.0 / ratio;
+	ratioA = 1;
+	ratioB = (int)(1.0 / ratio);
     }
 }
 
-int RampControler::calc( int newtarget )
+int RampControler::calc( int target )
 {
-    if ( target != newtarget ) counter = 0;
-    target = newtarget;
-    if ( current != target ) {
-	++counter;
-	if ( current < target ) {
-	    current += (counter % ratioB) == 0 ? ratioA : 0;
-	    if ( current > target ) current = target;
-	} else {
-	    current -= (counter % ratioB) == 0 ? ratioA : 0;
-	    if ( current < target ) current = target;
-	}
+    ++counter;
+    if ( current < target ) {
+	current += (counter % ratioB) == 0 ? ratioA : 0;
+	if ( current > target ) current = target;
+    } else if ( current > target ) {
+	current -= (counter % ratioB) == 0 ? ratioA : 0;
+	if ( current < target ) current = target;
     }
     return current;
 }
@@ -109,13 +121,7 @@ Ramp2Controler::Ramp2Controler()
     maxspeed = 0;
 }
 
-void Ramp2Controler::reset( int ofs )
-{
-    speed.reset(0);
-    offset = ofs;
-}
-
-void Ramp2Controler::resetSpeed( int spd )
+void Ramp2Controler::reset( int spd )
 {
     speed.reset(spd);
 }
@@ -126,34 +132,26 @@ void Ramp2Controler::ratio( double ratio, int max )
     maxspeed = max;
 }
 
-int Ramp2Controler::calc( int current, int newtarget )
+int Ramp2Controler::calc( int target )
 {
-    current -= offset;
-    if ( current == newtarget ) {
-	speed.reset(0);
-	return 0;
-    }
     int spd;
-    if ( newtarget > current ) {
-	if ( (newtarget-current) > speed.getCurrent()*speed.getCurrent() ) {
+    if ( target == 0 ) {
+	speed.reset(0);
+	spd = 0;
+    } else if ( target > 0 ) {
+	if ( target /*(newtarget-current)*/ > speed.getCurrent()*speed.getCurrent() ) {
 	    spd = speed.calc(-maxspeed);
 	} else {
 	    spd = speed.calc(0);
 	}
-    } else {
-	if ( (current-newtarget) > speed.getCurrent()*speed.getCurrent() ) {
+    } else { // target < 0
+	if ( -target /*(current-newtarget)*/ > speed.getCurrent()*speed.getCurrent() ) {
 	    spd = speed.calc(maxspeed);
 	} else {
 	    spd = speed.calc(0);
 	}
     }
     return spd;
-}
-
-bool Ramp2Controler::inTarget( int diff )
-{
-    diff -= offset;
-    return (-ERROR <= diff) && (diff <= ERROR);
 }
 
 void AngleMotor::setAngle( int32_t targetAngle )

@@ -18,14 +18,20 @@ Operator::Operator( Machine* mcn ) {
     prevAngL = prevAngR = 0;
     logCnt = 0;	
     courseMapindex =0;
-    slalomStatus = 0;
+    sequenceNumber = 0;
+    slalomMessagedStatus = -1;
+    slalomCounter = 0;
+    slalomDistance = 0;
+    slalomAzimuth = 0;
+    slalomPreviousDistance = 0;
     machine->speed.ratio(0.1);
-    machine->azimuth.ratio(0.2,20);
-    //currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
+    machine->azimuth.ratio(0.1,20); // 最大角速度は 20 に決め打ち。
+
+    currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
     //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
-    currentMethod = &Operator::slalomOnPrep; // 難所「板の前半」攻略用
+    //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
-    //currentMethod = &Operator::catchBlock; // 難所「ブロックキャッチ」攻略用
+    //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
 }
 
 bool Operator::operate()
@@ -97,7 +103,6 @@ void Operator::lineTrace()
 void Operator::blindRunner()
 {
     // Added by Sugino
-    rgb_raw_t cur_rgb;
     int16_t grayScaleBlueless;
     int forward;      /* 前後進命令 */
     int turn;         /* 旋回命令 */
@@ -128,12 +133,40 @@ void Operator::blindRunner()
 
 }
 
-int calcTurn( int turn, int forward )
+// 赤色をスレッショルドとして、turn 値を計算する。
+LineTraceLogic::~LineTraceLogic()
 {
+    // Nothing to do. But need to be defined.
+}
+
+class WithRed : public LineTraceLogic
+{
+private:
+    int threshold;
+public:
+    WithRed( int thre );
+    virtual int calcTurn( rgb_raw_t* rgb, int speed );
+    virtual ~WithRed();
+};
+
+WithRed::WithRed( int thre )
+{
+    threshold = thre;
+}
+
+WithRed::~WithRed()
+{
+    // Nothing to do. But need to be defined.
+}
+
+// PID制御のP制御のみを行う
+int WithRed::calcTurn( rgb_raw_t* rgb, int forward )
+{
+    int turn = threshold - rgb->r; // 赤色だけを使用する
     int turnmax;
 
     turn = (int)(((double)turn)*((double)forward)/40.0);
-    turnmax = ev3api::Motor::PWM_MAX - forward;
+    turnmax = ev3api::Motor::PWM_MAX - (forward > 0 ? forward : -forward);
     if ( turn < -turnmax ) turn = -turnmax;
     if ( turn > +turnmax ) turn = +turnmax;
     if ( forward < 0 ) turn = -turn;
@@ -141,22 +174,22 @@ int calcTurn( int turn, int forward )
     return turn;
 }
 
-struct Slalom {
-    int32_t distance;
-    int16_t angle;
-};
+// 赤色の30をスレッショルドとして、turn 値を計算する。
+WithRed withR30(30);
+
+// 赤色の60をスレッショルドとして、turn 値を計算する。
+WithRed withR60(60);
 
 // 目的：山中さんの固定走行プログラムができるまでの通常走行のみ版
 // 処理内容：初期状態から、通常どおりライントレースし難所直前までたどり着く
 // ロボの初期位置：初期状態
 void Operator::lineTraceDummy()
 {
-    rgb_raw_t cur_rgb;
     int32_t  distance = machine->distanceL + machine->distanceR;
 
     // 最初から左エッジでライントレースする。
     // 山中さんのコードができたら、削除する。
-    if ( distance < 28500 ) {
+    if ( distance < 27500 ) {
 	int forward;
 
 	if ( distance < 4600-500 ) forward = 80;
@@ -178,32 +211,10 @@ void Operator::lineTraceDummy()
 	else forward = 50;
 
 	forward = machine->speed.calc(forward);
-
-	machine->colorSensor->getRawColor(cur_rgb);
-	int turn = calcTurn(60-cur_rgb.r,forward)*EDGE;
+	int turn = withR60.calcTurn(machine->getRawRGB(),forward);
 	machine->moveDirect(forward,turn);
     } else {
-	slalomStatus = 0;
-	currentMethod = &Operator::slalomOn;
-    }
-}
-
-// 目的：難所「板の前半」のトライ＆エラーをするためのもの
-// 処理内容：難所の直前から、板にぶつかるまでライントレースする。
-// ロボの初期位置：次のコマンドでを難所の直前に配置する。
-// curl -X POST -H "Content-Type: application/json" -d '{"initLX":"8.0","initLY":"0","initLZ":"15.5","initLROT":"90"}' http://localhost:54000
-void Operator::slalomOnPrep()
-{
-    rgb_raw_t cur_rgb;
-    int32_t  distance = machine->distanceL + machine->distanceR;
-
-    if ( distance < 1000 ) {
-	int forward = 30;
-	machine->colorSensor->getRawColor(cur_rgb);
-	int turn = calcTurn(60-cur_rgb.r,forward)*EDGE;
-	machine->moveDirect(forward,turn);
-    } else {
-	slalomStatus = 0;
+	sequenceNumber = 0;
 	currentMethod = &Operator::slalomOn;
     }
 }
@@ -213,7 +224,6 @@ void Operator::slalomOnPrep()
 // ロボの初期位置：初期状態
 void Operator::reverseEdge()
 {
-    rgb_raw_t cur_rgb;
     int32_t  distance = machine->distanceL + machine->distanceR;
 
     if ( distance < 20000 ) {
@@ -241,129 +251,154 @@ void Operator::reverseEdge()
 	} else {
 	    edge = EDGE; // 正エッジ
 	}
-	machine->colorSensor->getRawColor(cur_rgb);
-	int turn = calcTurn(60-cur_rgb.r,forward)*edge;
+	int turn = withR60.calcTurn(machine->getRawRGB(),forward)*edge;
 	machine->moveDirect(forward,turn);
     } else {
-	slalomStatus = 0;
+	sequenceNumber = 0;
 	currentMethod = &Operator::slalomOn;
     }
 }
 
+// ----------------------------------------------------------------------
+void Operator::currentTask( const char* const message )
+{
+    if ( slalomMessagedStatus != sequenceNumber ) {
+	log(message);
+	slalomMessagedStatus = sequenceNumber;
+    }
+    ++slalomCounter;
+}
+
+// Goto Next Status : 次の処理番号に進む
+void Operator::nextSequence( int flags )
+{
+    ++sequenceNumber;
+    slalomCounter = 0;
+    slalomPreviousDistance = getAbsDistance();
+    if ( flags & AZIMUTH ) resetAzimuth();
+    if ( flags & DIST ) markCheckPoint();
+}
+
+// Goto Next Method
+void Operator::nextMethod( void (Operator::*next)() )
+{
+    sequenceNumber = 0;
+    slalomCounter = 0;
+    currentMethod = next;
+}
+
+
+int Operator::moveAt( int spd )
+{
+    int speed = machine->speed.calc(spd);
+    machine->moveDirect(speed,0);
+    machine->azimuth.resetSpeed(0);
+    return speed;
+}
+
+int Operator::curveTo( int spd, int azi )
+{
+    spd = machine->speed.calc(spd);
+    int turn = machine->azimuth.calc(slalomAzimuth+azi-getAbsAzimuth())*EDGE;
+    machine->moveDirect(spd,turn);
+    return turn;
+}
+
+int Operator::lineTraceAt( int spd, LineTraceLogic* logic )
+{
+    spd = machine->speed.calc(spd);
+    int turn = logic->calcTurn(machine->getRawRGB(),spd);
+    machine->azimuth.resetSpeed(turn);
+    machine->moveDirect(spd,turn);
+    return spd;
+}
+
+// slalomOn() からスタートする場合は、次のコマンドを実行する。
+// 左コース用：
+// curl -X POST -H "Content-Type: application/json" -d '{"initLX":"8.0","initLY":"0","initLZ":"15.5","initLROT":"90"}' http://localhost:54000
 void Operator::slalomOn()
 {
-    rgb_raw_t cur_rgb;
-    int32_t  distance = machine->distanceL + machine->distanceR;
-    int32_t  angle = machine->distanceL - machine->distanceR;
+    int seqnum = 0;
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] スラローム前半開始");
+	nextSequence();
 
-    int forward = 30; // TODO: slalomOn に入る前のスピードを設定する。
-    int turn = 0;
-    int32_t base;
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 板にぶつかるまでライントレースする");
+	lineTraceAt(30,&withR60);
+	if ( getCounter() > 1000 ) nextSequence(); // 4ms x 1000 秒たったら次へ
 
-    switch ( slalomStatus ) {
-    case 0: // initial state
-	slalomCounter = 0;
-	++slalomStatus;
-	machine->speed.reset(forward);
-	log("[Operator::slalomOn] 姿勢を揃える");
-	break;
-    case 1: // 板にぶつかり続けて、姿勢を揃える
-	if ( ++slalomCounter < 1000 ) {
-	    forward = machine->speed.calc(10);
-	} else {
-	    ++slalomStatus;
-	    slalomDistance = distance; // 距離のリセット
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] バックする");
-	}
-	break;
-    case 2: // バックする
-	if ( (distance-slalomDistance) > -300 ) {
-	    forward = machine->speed.calc(-10);
-	} else {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] アームを上げつつつ前進する");
-	}
-	break;
-    case 3: // アームを上げつつつ前進する
-	if ( (distance-slalomDistance) < 300 ) {
-	    machine->armMotor->setAngle(-20);
-	    forward = machine->speed.calc(50);
-	} else {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] アームをおろしつつ減速しライントレースする");
-	}
-	break;
-    case 4: // アームをおろしつつ減速しライントレースする
-#define SLALOMDIST 950
-	if ( (distance-slalomDistance) < SLALOMDIST ) {
-	    machine->armMotor->setAngle(-50);
-	    forward = machine->speed.calc(10);
-	    machine->colorSensor->getRawColor(cur_rgb);
-	    turn = calcTurn(30-cur_rgb.r,forward)*EDGE;
-	} else {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] 逆走しつつライントレースする");
-	}
-	break;
-    case 5: // 逆走しつつライントレースする
-#define BACKDIST 650
-	if ( (distance-slalomDistance) > BACKDIST ) {
-	    forward = machine->speed.calc(-10);
-	    machine->colorSensor->getRawColor(cur_rgb);
-	    turn = calcTurn(30-cur_rgb.r,forward)*EDGE;
-	} else {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] 前進しつつライントレースする");
-	}
-	break;
-    case 6: // 前進しつつライントレースする
-	if ( (distance-slalomDistance) < SLALOMDIST ) {
-	    forward = machine->speed.calc(10);
-	    machine->colorSensor->getRawColor(cur_rgb);
-	    turn = calcTurn(30-cur_rgb.r,forward)*EDGE;
-	} else {
-	    machine->azimuth.reset(angle); // 角度のリセット
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] スラロームする");
-	}
-	break;
-    case 7: // スラロームする
-	base = SLALOMDIST;
-	forward = machine->speed.calc(10);
-	if ( (distance-slalomDistance) < 2800 ) {
-	    struct Slalom slalom[] = { /* ★距離と方角(260 count = 90度)を調整する */
-		{ 330, 120 },  // 右に移動
-		{ 240, 0 },    // 直進
-		{ 520, -120 }, // 左に移動
-		{ 300, 0 },    // 直進
-		{ 430, 120 },  // 右に移動
-		{9999, 0 },    // 直進
-	    };
-	    for ( int i = 0; i < (int)(sizeof(slalom)/sizeof(Slalom)); ++i ) {
-		base += slalom[i].distance;
-		if ( (distance-slalomDistance) < base ) {
-		    turn = machine->azimuth.calc(angle,slalom[i].angle)*EDGE;
-		    break;
-		}
-	    }
-	} else {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] スラローム前半終了");
-	}
-	break;
-    case 8: // スラローム前半終了
-	slalomStatus = 0;
-	currentMethod = &Operator::slalomOff;
-	return;
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 姿勢を揃える");
+	moveAt(10);
+	if ( getCounter() > 1000 ) nextSequence(); // 4ms x 1000 秒たったら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 徐々に速度を下げる");
+	int speed = moveAt(0);
+	if ( speed == 0 ) nextSequence(DIST); // 速度が0になったら、板の端をチェックポイントとしてマークして次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] バックする");
+	moveAt(-10);
+	if ( getCPDistance() < -300 ) nextSequence(); // チェックポイントの後方 -300 まで来たら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] アームを上げつつつ前進する");
+	machine->armMotor->setAngle(-20);
+	moveAt(50);
+	if ( getCPDistance() > 300 ) nextSequence(); // チェックポイントの前方 300 まで来たら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] アームをおろしつつ減速しライントレースする");
+	machine->armMotor->setAngle(-50);
+	int speed = lineTraceAt(0,&withR30);
+	if ( speed == 0 ) nextSequence(); // 停止したら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 逆走する");
+	moveAt(-10);
+	if ( getCPDistance() < 650 ) nextSequence(); // チェックポイントから 650 までバックしたら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 前進しつつライントレースする");
+	lineTraceAt(10,&withR30);
+	if ( getCPDistance() > 950 ) nextSequence(AZIMUTH); // チェックポイントから 950 まで来たら、角度をリセットして次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 右に移動");
+	curveTo(10,120);
+	if ( getRelDistance() > 330 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 直進");
+	curveTo(10,0);
+	if ( getRelDistance() > 240 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 左に移動");
+	curveTo(10,-120);
+	if ( getRelDistance() > 520 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 直進");
+	curveTo(10,0);
+	if ( getRelDistance() > 300 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 右に移動");
+	curveTo(10,120);
+	if ( getRelDistance() > 430 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] 直進");
+	curveTo(10,0);
+	if ( getCPDistance() > 2800 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOn] スラローム前半終了");
+	nextMethod(&Operator::slalomOff);
     }
-    machine->moveDirect(forward,turn);
 }
 
 // slalomOff() からスタートする場合は、次のコマンドを実行する。
@@ -373,268 +408,158 @@ void Operator::slalomOn()
 // curl -X POST -H "Content-Type: application/json" -d '{"initRX":"-22.0","initRY":"0.1","initRZ":"15.2","initRROT":"270"}' http://localhost:54000
 void Operator::slalomOff()
 {
-    int forward = 10;
-    int turn = 0;
-    int32_t base;
-    rgb_raw_t cur_rgb;
+    int seqnum = 0;
 
-    int32_t  distance = machine->distanceL + machine->distanceR;
-    int32_t  angle = machine->distanceL - machine->distanceR;
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] スラローム後半開始");
+	nextSequence();
 
-    switch ( slalomStatus ) {
-    case 0: // initial state
-	slalomCounter = 0;
-	++slalomStatus;
-	log("[Operator::slalomOff] 左に向く");
-	break;
-    case 1: // 左に向く
-	forward = machine->speed.calc(5);
-	turn = machine->azimuth.calc(angle,-180)*EDGE;
-	machine->colorSensor->getRawColor(cur_rgb);
-	if ( machine->azimuth.inTarget(angle+180) ) {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOff] 黒線を探す");
-	} else if ( (cur_rgb.r + cur_rgb.g + cur_rgb.b) < 30 ) {
-	    ++slalomStatus;
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOff] 前方を向く");
-	}
-	break;
-    case 2: // 黒線を探す
-	machine->colorSensor->getRawColor(cur_rgb);
-	forward = machine->speed.calc(10);
-	turn = machine->azimuth.calc(angle,-180)*EDGE;
-	if ( (cur_rgb.r + cur_rgb.g + cur_rgb.b) < 30 ) {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOff] 前方を向く");
-	}
-	break;
-    case 3: // 前方を向く
-	forward = machine->speed.calc(12);
-	turn = machine->azimuth.calc(angle,0)*EDGE;
-	if ( machine->azimuth.inTarget(angle) ) {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOff] ライントレースしつつ黒線が切れるところを探す");
-	}
-	break;
-    case 4: // ライントレースしつつ黒線が切れるところを探す
-	forward = machine->speed.calc(10);
-	machine->colorSensor->getRawColor(cur_rgb);
-	turn = calcTurn(30-cur_rgb.r,forward)*EDGE;
-	if ( turn < -10 ) {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    slalomDistance = distance; // 距離をリセットする
-	    machine->speed.reset(forward);
-	    machine->azimuth.resetSpeed(turn);
-	    log("[Operator::slalomOff] 少しバックしつつ角度調整する");
-	}
-	break;
-    case 5: // 少しバックしつつ角度調整する
-	forward = machine->speed.calc(-10);
-	turn = machine->azimuth.calc(angle,0)*EDGE;
-	if ( (distance-slalomDistance) < -200 ) {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] 90度回転する");
-	}
-	break;
-    case 6: // 90度回転する
-	forward = machine->speed.calc(0);
-	turn = machine->azimuth.calc(angle,260)*EDGE; // 260 count = 90度
-	if ( machine->azimuth.inTarget(angle-260) ) {
-	    slalomCounter = 0;
-	    ++slalomStatus;
-	    log("[Operator::slalomOff] スラロームする");
-	}
-	break;
-    case 7: // スラロームする
-	base = 0;
-	forward = machine->speed.calc(10);
-	if ( (distance-slalomDistance) < 1000 ) {
-	    struct Slalom slalom[] = { /* ★距離と方角(260 count = 90度)を調整する */
-		{ 350, 260+0 },   // 直進
-		{ 450, 260+150 }, // 右に移動
-		{9999, 260+0 },   // 直進
-	    };
-	    for ( int i = 0; i < (int)(sizeof(slalom)/sizeof(Slalom)); ++i ) {
-		base += slalom[i].distance;
-		if ( (distance-slalomDistance) < base ) {
-		    turn = machine->azimuth.calc(angle,slalom[i].angle)*EDGE;
-		    break;
-		}
-	    }
-	} else {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOn] 少しバックする");
-	}
-	break;
-    case 8: // 少しバックする
-	forward = machine->speed.calc(-10);
-	turn = 0;
-	if ( (distance-slalomDistance) < 950 ) {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOff] ライントレースせずに加速してアームを上げる");
-	}
-	break;
-    case 9: // ライントレースせずに加速してアームを上げる
-	if ( (distance-slalomDistance) < 1500 ) {
-	    machine->armMotor->setAngle(-20);
-	    forward = machine->speed.calc(50);
-	    turn = 0;
-	} else {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    log("[Operator::slalomOff] ライントレースせずに停止してアームを下げる");
-	}
-	break;
-    case 10: // ライントレースせずに停止してアームを下げる
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 左に向きつつ黒線を探す");
+	curveTo(5,-100);
+	if ( machine->getRGB() < 30 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 前方を向く");
+	curveTo(12,0);
+	if ( getAzimuth() > -5 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] ライントレースする");
+	lineTraceAt(10,&withR30);
+	if ( getRelDistance() > 300 ) nextSequence(AZIMUTH); // 方角をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] ライントレースしつつ黒線が切れるところを探す");
+	lineTraceAt(10,&withR30);
+	if ( machine->getRGB() > 80 ) nextSequence(DIST); // 距離をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 少しバックしつつ角度調整する");
+	curveTo(-10,0);
+	if ( getCPDistance() < -100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 90度回転する");
+	curveTo(0,260);
+	if ( getAzimuth() > 260-5 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 直進");
+	curveTo(10,260);
+	if ( getRelDistance() > 350 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 右に移動");
+	curveTo(10,260+150);
+	if ( getRelDistance() > 400 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 直進");
+	curveTo(10,260);
+	if ( getCPDistance() > 1000 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] 少しバックする");
+	moveAt(-10);
+	if ( getCPDistance() < 950 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] ライントレースせずに加速してアームを上げる");
+	machine->armMotor->setAngle(-20);
+	moveAt(50);
+	if ( getCPDistance() > 1500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] ライントレースせずに停止してアームを下げる");
 	machine->armMotor->setAngle(-50);
-	forward = machine->speed.calc(0);
-	turn = 0;
-	if ( forward == 0 ) {
-	    ++slalomStatus;
-	    slalomCounter = 0;
-	    machine->azimuth.resetSpeed(0);
-	    log("[Operator::slalomOff] ブロックの方に向く");
-	}
-	break;
-    case 11: // ブロックの方に向く
-	forward = 0;
-	turn = machine->azimuth.calc(angle,520)*EDGE;
-	if ( machine->azimuth.inTarget(angle-520) ) {
-	    ++slalomStatus;
-	    machine->speed.reset(0);
-	    slalomCounter = 0;
-	    log("[Operator::slalomOff] スラローム後半終了");
-	}
-	break;
-    case 12: // スラローム後半終了
-	slalomStatus = 0;
-	currentMethod = &Operator::catchBlock;
-	return;
+	int speed = moveAt(0);
+	if ( speed == 0 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] ブロックの方に向く");
+	curveTo(0,520);
+	if ( getAzimuth() > 520-5 ) nextSequence();
+
+    } else {
+	currentTask("[Operator::slalomOff] スラローム後半終了");
+	nextMethod(&Operator::moveToBlock);
     }
-    machine->moveDirect(forward,turn);
 }
 
-// catchBlock() からスタートする場合は、次のコマンドを実行する。
+// moveToBlock() からスタートする場合は、次のコマンドを実行する。
 // 左コース用：
 // curl -X POST -H "Content-Type: application/json" -d '{"initLX":"21.5","initLY":"0.0","initLZ":"7.2","initLROT":"270"}' http://localhost:54000
-void Operator::catchBlock()
+void Operator::moveToBlock()
 {
-    int forward = 10;
-    int turn = 0;
-    int32_t base;
-    rgb_raw_t cur_rgb;
+    int seqnum = 0;
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] ブロックの直前へ移動開始");
+	nextSequence(AZIMUTH|DIST); // 方角と距離をリセットする
 
-    int32_t  distance = machine->distanceL + machine->distanceR;
-    int32_t  angle = machine->distanceL - machine->distanceR;
-    switch ( slalomStatus ) {
-    case 0: // initial state
-	slalomCounter = 0;
-	++slalomStatus;
-	machine->speed.reset(0);
-	machine->azimuth.reset(angle);
-	machine->azimuth.resetSpeed(0);
-	log("[Operator::catchBlock] １つめの黒線を見つけるまで進む");
-	break;
-    case 1: // １つめの黒線を見つけるまで進む
-	forward = machine->speed.calc(20);
-	turn = machine->azimuth.calc(angle,30)*EDGE;
-	machine->colorSensor->getRawColor(cur_rgb);
-	if ( (cur_rgb.r + cur_rgb.g + cur_rgb.b) < 30 ) {
-	    slalomCounter = 0;
-	    slalomDistance = distance; // 距離をリセットする
-	    machine->azimuth.resetSpeed(0);
-	    ++slalomStatus;
-	    log("[Operator::catchBlock] 右に向く");
-	}
-	break;
-    case 2: // 右に向く
-	forward = machine->speed.calc(20);
-	turn = machine->azimuth.calc(angle,260)*EDGE;
-	if ( (distance-slalomDistance) > 100 ) {
-	    slalomCounter = 0;
-	    ++slalomStatus;
-	    log("[Operator::catchBlock] 右に向きつつ２つめの黒線を見つけるまで進む");
-	}
-	break;
-    case 3: // 右に向きつつ２つめの黒線を見つけるまで進む
-	forward = machine->speed.calc(20);
-	turn = machine->azimuth.calc(angle,260)*EDGE;
-	machine->colorSensor->getRawColor(cur_rgb);
-	if ( (cur_rgb.r + cur_rgb.g + cur_rgb.b) < 30 ) {
-	    slalomCounter = 0;
-	    ++slalomStatus;
-	    log("[Operator::catchBlock] 前方を向く");
-	}
-	break;
-    case 4: // 前方を向く
-	forward = machine->speed.calc(-7);
-	turn = machine->azimuth.calc(angle,0)*EDGE;
-	if ( machine->azimuth.inTarget(angle) ) {
-	    slalomCounter = 0;
-	    ++slalomStatus;
-	    slalomDistance = distance; // 距離をリセットする
-	    log("[Operator::catchBlock] ライントレースする");
-	}
-	break;
-    case 5: // ライントレースする
-	forward = machine->speed.calc(10);
-	machine->colorSensor->getRawColor(cur_rgb);
-	turn = calcTurn(60-cur_rgb.r,forward)*EDGE;
-	if ( (distance-slalomDistance) > 500 ) {
-	    slalomCounter = 0;
-	    machine->azimuth.reset(angle); // 角度をリセットする
-	    machine->azimuth.resetSpeed(0);
-	    ++slalomStatus;
-	    log("[Operator::catchBlock] ブロックをキャッチしに行く");
-	}
-	break;
-    case 6: // ブロックをキャッチしに行く
-	forward = machine->speed.calc(10);
-	{
-	    struct Slalom slalom[] = { /* ★距離と方角(260 count = 90度)を調整する */
-		{1000,    0 },   // 直進
-		{1800, -275 }, // 左に移動
-		{4500, -550 }, // 戻る
-	    };
-	    int i;
-	    int n = (int)(sizeof(slalom)/sizeof(Slalom));
-	    for ( i = 0; i < n; ++i ) {
-		if ( (distance-slalomDistance) < slalom[i].distance ) {
-		    turn = machine->azimuth.calc(angle,slalom[i].angle)*EDGE;
-		    break;
-		}
-	    }
-	    if ( i == n ) {
-		++slalomStatus;
-		slalomCounter = 0;
-		log("[Operator::slalomOn] 停止する");
-	    }
-	}
-	break;
-    case 7: // 停止する
-	forward = machine->speed.calc(0);
-	turn = 0;
-	if ( forward == 0 ) {
-	    slalomCounter = 0;
-	    ++slalomStatus;
-	    log("[Operator::catchBlock] キャッチブロック終了");
-	}
-	break;
-    case 8: // キャッチブロック終了
-	slalomStatus = 0;
-	currentMethod = NULL;
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] １つめの黒線を見つけるまで進む");
+	curveTo(20,30);
+	if ( machine->getRGB() < 30 ) nextSequence(DIST); // 距離をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] 少しの間だけ黒線を無視して右に向く");
+	curveTo(20,260);
+	if ( getCPDistance() > 100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] 右に向きつつ２つめの黒線を見つけるまで進む");
+	curveTo(20,260);
+	if ( machine->getRGB() < 30 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] 前方を向く");
+	curveTo(-7,0);
+	if ( getAzimuth() < 5 ) nextSequence(DIST); // 距離をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] ライントレースする");
+	lineTraceAt(10,&withR60);
+	if ( getCPDistance() > 500 ) nextSequence(AZIMUTH); // 角度をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] ブロックをキャッチしに行く");
+	curveTo(10,0);
+	if ( getCPDistance() > 1000 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] 左に移動");
+	curveTo(10,-270);
+	if ( getCPDistance() > 1800 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] 戻る");
+	curveTo(10,-540);
+	if ( getAzimuth() < -540+5 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToBlock] ブロックの直前へ移動終了");
+	nextMethod(&Operator::moveToGarage);
+    }
+}
+
+void Operator::moveToGarage()
+{
+    int seqnum = 0;
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToGarage] ガレージへ移動開始");
+	nextSequence(AZIMUTH|DIST); // 方角と距離をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToGarage] 停止する");
+	moveAt(20);
+	if ( getCPDistance() > 2000 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToGarage] ガレージへ移動終了");
+	nextMethod(NULL);
 	return;
     }
-    machine->moveDirect(forward,turn);
 }
 
 // もう不要！？
