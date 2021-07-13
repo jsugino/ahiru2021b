@@ -27,11 +27,15 @@ Operator::Operator( Machine* mcn ) {
     machine->speed.ratio(0.1);
     machine->azimuth.ratio(0.1,20); // 最大角速度は 20 に決め打ち。
 
-    currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
+    //currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
     //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
     //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
     //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
+    currentMethod = &Operator::moveToGarage;
+
+    //currentMethod = &Operator::azimuthCheck; // 角度の測定用
+    //currentMethod = &Operator::rampCheck; // 台形制御の測定用
 }
 
 bool Operator::operate()
@@ -260,10 +264,12 @@ void Operator::reverseEdge()
 }
 
 // ----------------------------------------------------------------------
-void Operator::currentTask( const char* const message )
+void Operator::currentTask( const char* const message, ... )
 {
     if ( slalomMessagedStatus != sequenceNumber ) {
-	log(message);
+	va_list ap;
+	va_start(ap,message);
+	vlog(message,ap);
 	slalomMessagedStatus = sequenceNumber;
     }
     ++slalomCounter;
@@ -299,7 +305,7 @@ int Operator::moveAt( int spd )
 int Operator::curveTo( int spd, int azi )
 {
     spd = machine->speed.calc(spd);
-    int turn = machine->azimuth.calc(slalomAzimuth+azi-getAbsAzimuth())*EDGE;
+    int turn = machine->azimuth.calc(slalomAzimuth+azi-getAbsAzimuth());
     machine->moveDirect(spd,turn);
     return turn;
 }
@@ -307,7 +313,7 @@ int Operator::curveTo( int spd, int azi )
 int Operator::lineTraceAt( int spd, LineTraceLogic* logic )
 {
     spd = machine->speed.calc(spd);
-    int turn = logic->calcTurn(machine->getRawRGB(),spd);
+    int turn = logic->calcTurn(machine->getRawRGB(),spd)*EDGE;
     machine->azimuth.resetSpeed(turn);
     machine->moveDirect(spd,turn);
     return spd;
@@ -416,12 +422,17 @@ void Operator::slalomOff()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::slalomOff] 左に向きつつ黒線を探す");
-	curveTo(5,-100);
+	curveTo(10,-90);
 	if ( machine->getRGB() < 30 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::slalomOff] そのまま少し進む");
+	curveTo(10,-90);
+	if ( getRelDistance() > 100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::slalomOff] 前方を向く");
-	curveTo(12,0);
+	curveTo(10,0);
 	if ( getAzimuth() > -5 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
@@ -437,7 +448,7 @@ void Operator::slalomOff()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::slalomOff] 少しバックしつつ角度調整する");
 	curveTo(-10,0);
-	if ( getCPDistance() < -100 ) nextSequence();
+	if ( getCPDistance() < -50 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::slalomOff] 90度回転する");
@@ -447,7 +458,7 @@ void Operator::slalomOff()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::slalomOff] 直進");
 	curveTo(10,260);
-	if ( getRelDistance() > 350 ) nextSequence();
+	if ( getRelDistance() > 500 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::slalomOff] 右に移動");
@@ -543,17 +554,36 @@ void Operator::moveToBlock()
     }
 }
 
+// moveToGarage() からスタートする場合は、次のコマンドを実行する。
+// 左コース用：
+// curl -X POST -H "Content-Type: application/json" -d '{"initLX":"12.5","initLY":"0","initLZ":"6.1","initLROT":"90"}' http://localhost:54000
 void Operator::moveToGarage()
 {
+    if ( getSequenceNumber() == 0 ) {
+    } else if ( getSequenceNumber() == 2 ) {
+    }
     int seqnum = 0;
     if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::moveToGarage] ガレージへ移動開始");
 	nextSequence(AZIMUTH|DIST); // 方角と距離をリセットする
+	startLogging("distL"); startLogging("distR");
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentTask("[Operator::moveToGarage] 停止する");
-	moveAt(20);
-	if ( getCPDistance() > 2000 ) nextSequence();
+	currentTask("[Operator::moveToGarage] ゆっくりとブロックを運ぶ");
+	curveTo(10,0);
+	if ( getCPDistance() > 500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToGarage] 早くブロックを運ぶ");
+	curveTo(50,0);
+	if ( getCPDistance() > 2000 ) { nextSequence();
+	    startLogging("rgbR"); startLogging("rgbG"); startLogging("rgbB"); }
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::moveToGarage] ゆっくりブロックを運びつつ黒線を探す");
+	curveTo(10,0);
+	if ( machine->getRGB() < 150 ) { nextSequence();
+	    stopLogging("distL"); stopLogging("distR"); }
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentTask("[Operator::moveToGarage] ガレージへ移動終了");
@@ -618,4 +648,166 @@ void Operator::updateDistance()
 
 Operator::~Operator() {
     log("Operator destructor");
+}
+
+// ----------------------------------------------------------------------
+// Azimuth のカウント値と角度の比を、実際に走らせて算出してみるためのプログラム。
+// コース上の同じところを何度回っても、方角のズレが発生しないか確かめる。
+// コース上の障害物をすべて除いて、初期位置から、左コース or 右コースで走らせてみる。
+void Operator::azimuthCheck()
+{
+    // 下記のデータは、7/12 に杉野が試してみた結果
+    // Spd と Ang を次のように設定すると、ちょうどよい感じにもとのラインに戻る。
+    // Left Course
+    // Spd 70, Ang 267
+    // Spd 60, Ang 269
+    // Spd 50, Ang 267
+    // Spd 40, Ang 269
+    // Spd 30, Ang 271
+    // Spd 20, Ang 271
+    // Spd 10, Ang 269
+
+    // Right Course
+    // Spd 60, Ang 268
+    // Spd 30, Ang 270
+    // Spd 10, Ang 273
+
+    int Ang = 271;
+    int Spd = 30;
+    int Sta = 600; // 助走距離
+    int Len = Spd*40+200; // 縦の距離
+    int Wid = Spd*40+200; // 横の距離
+    int tSpd = (Spd < 30) ? Spd : 30; // ライントレースの速度
+
+    int num = ((getSequenceNumber()-3)%4)+3; // 処理対象のシーケンス番号
+    int aziOld = Ang*(getSequenceNumber()-3)*(-EDGE); // 一つ前のシーケンスでの方角
+    int azi = Ang*(getSequenceNumber()-2)*(-EDGE); // そのシーケンスでの方角
+
+    int seqnum = 0;
+
+    if ( getSequenceNumber() == 3 ) {
+	startLogging("distL");
+	startLogging("distR");
+	startLogging("AngMode");
+	startLogging("AngSpd");
+    } else if ( getSequenceNumber() == 8 ) {
+	stopLogging("distL");
+	stopLogging("distR");
+	stopLogging("AngMode");
+	stopLogging("AngSpd");
+    }
+
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::azimuthCheck] スタート");
+	nextSequence(DIST); // 距離をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::azimuthCheck] ライントレースする");
+	lineTraceAt(tSpd,&withR60);
+	if ( getRelDistance() > (Len+Sta)/2 ) nextSequence(AZIMUTH); // 角度をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::azimuthCheck] 直進する");
+	moveAt(Spd);
+	if ( getRelDistance() > (Len+Sta)/2 ) nextSequence();
+
+	// 以下の４シーケンスを何度も繰り返す
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] 左に向く diff = %d",getAzimuth()-aziOld);
+	curveTo(Spd,azi);
+	if ( getRelDistance() > Wid ) nextSequence();
+
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] 逆走する diff = %d",getAzimuth()-aziOld);
+	curveTo(Spd,azi);
+	if ( getRelDistance() > Len ) nextSequence();
+
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] スタート直線に向かう diff = %d",getAzimuth()-aziOld);
+	curveTo(Spd,azi);
+	if ( getRelDistance() > Wid ) nextSequence();
+
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] スタート直線に乗る diff = %d",getAzimuth()-aziOld);
+	curveTo(Spd,azi);
+	if ( getRelDistance() > Len ) nextSequence();
+
+	// 実際には下のシーケンスは処理されない
+    } else {
+	currentTask("[Operator::azimuthCheck] 終了");
+	nextMethod(NULL);
+    }
+}
+
+// azimuthCheck() と同様に同じところを回るが、台形制御しない。
+void Operator::rampCheck()
+{
+    // Left Course
+    // # Spd 70, Ang 267
+    // # Spd 60, Ang 269
+    // Spd 50, Ang 268
+    // # Spd 40, Ang 269
+    // # Spd 30, Ang 271
+    // # Spd 20, Ang 271
+    // Spd 10, Ang 271, err 10
+
+    int Ang = 268;
+    int Spd = 50;
+    int Sta = 600; // 助走距離
+    int Len = Spd*40+200; // 縦の距離
+    int Wid = Spd*40+200; // 横の距離
+    int tSpd = (Spd < 30) ? Spd : 30; // ライントレースの速度
+    int err = 10; // 角度の誤差範囲
+
+    int num = ((getSequenceNumber()-3)%4)+3; // 処理対象のシーケンス番号
+    int aziOld = Ang*(getSequenceNumber()-3)*(-EDGE); // 一つ前のシーケンスでの方角
+    int azi = Ang*(getSequenceNumber()-2)*(-EDGE); // そのシーケンスでの方角
+
+    int seqnum = 0;
+    int turn = 20*EDGE;
+
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::azimuthCheck] スタート");
+	nextSequence(DIST); // 距離をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::azimuthCheck] ライントレースする");
+	lineTraceAt(tSpd,&withR60);
+	if ( getRelDistance() > (Len+Sta)/2 ) nextSequence(AZIMUTH); // 角度をリセットする
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentTask("[Operator::azimuthCheck] 直進する");
+	machine->moveDirect(Spd,0);
+	if ( getRelDistance() > (Len+Sta)/2 ) nextSequence();
+
+	// 以下の４シーケンスを何度も繰り返す
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] 左に向く diff = %d",getAzimuth()-aziOld);
+	if ( getAzimuth() < azi+err ) turn = 0;
+	machine->moveDirect(Spd,turn);
+	if ( getRelDistance() > Wid ) nextSequence();
+
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] 逆走する diff = %d",getAzimuth()-aziOld);
+	if ( getAzimuth() < azi+err ) turn = 0;
+	machine->moveDirect(Spd,turn);
+	if ( getRelDistance() > Len ) { nextSequence(); startLogging("distL"); startLogging("distR"); }
+
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] スタート直線に向かう diff = %d",getAzimuth()-aziOld);
+	if ( getAzimuth() < azi+err ) turn = 0;
+	machine->moveDirect(Spd,turn);
+	if ( getRelDistance() > Wid ) { nextSequence(); stopLogging("distL"); stopLogging("distR"); }
+
+    } else if ( seqnum++ == num ) {
+	currentTask("[Operator::azimuthCheck] スタート直線に乗る diff = %d",getAzimuth()-aziOld);
+	if ( getAzimuth() < azi+err ) turn = 0;
+	machine->moveDirect(Spd,turn);
+	if ( getRelDistance() > Len ) nextSequence();
+
+	// 実際には下のシーケンスは処理されない
+    } else {
+	currentTask("[Operator::azimuthCheck] 終了");
+	nextMethod(NULL);
+    }
 }

@@ -67,7 +67,7 @@ public:
     int getCounter() { return slalomCounter; }
 
     // Current Task : 現在の処理内容
-    void currentTask( const char* const message );
+    void currentTask( const char* const message, ... );
 
     // Goto Next Status : 次の処理番号に進む
     void nextSequence( int falgs = 0 );
@@ -115,6 +115,10 @@ public:
     void slalomOff();
     void moveToBlock();
     void moveToGarage();
+
+    // 計測用のメソッド
+    void azimuthCheck();
+    void rampCheck();
 };
 
 struct courseSection {

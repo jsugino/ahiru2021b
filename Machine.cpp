@@ -36,6 +36,8 @@ bool Machine::detect() {
     distanceL = leftMotor->getCount();
     distanceR = rightMotor->getCount();
     isGetRGB = false;
+    logging("distL",distanceL);
+    logging("distR",distanceR);
 
     return true;
 }
@@ -52,6 +54,9 @@ rgb_raw_t* Machine::getRawRGB()
 {
     if ( !isGetRGB ) {
 	colorSensor->getRawColor(cur_rgb);
+	logging("rgbR",cur_rgb.r);
+	logging("rgbG",cur_rgb.g);
+	logging("rgbB",cur_rgb.b);
 	isGetRGB = true;
     }
     return &cur_rgb;
@@ -132,25 +137,40 @@ void Ramp2Controler::ratio( double ratio, int max )
     maxspeed = max;
 }
 
+// このパラメーターは発見的に見つけている。
+#define RAMP2RATIO1 0.3
+#define RAMP2RATIO2 1.0
+
 int Ramp2Controler::calc( int target )
 {
     int spd;
+    int mode = 0;
     if ( target == 0 ) {
 	speed.reset(0);
 	spd = 0;
-    } else if ( target > 0 ) {
-	if ( target /*(newtarget-current)*/ > speed.getCurrent()*speed.getCurrent() ) {
-	    spd = speed.calc(-maxspeed);
-	} else {
-	    spd = speed.calc(0);
-	}
-    } else { // target < 0
-	if ( -target /*(current-newtarget)*/ > speed.getCurrent()*speed.getCurrent() ) {
-	    spd = speed.calc(maxspeed);
-	} else {
-	    spd = speed.calc(0);
+    } else {
+	double cur = (double)speed.getCurrent();
+	int threshold = cur * ( cur * RAMP2RATIO1 + RAMP2RATIO2 );
+	if ( target > 0 ) {
+	    if ( target > threshold ) {
+		spd = speed.calc(-maxspeed);
+		mode = 1;
+	    } else {
+		spd = speed.calc(0);
+		mode = 2;
+	    }
+	} else { // target < 0
+	    if ( -target > threshold ) {
+		spd = speed.calc(maxspeed);
+		mode = 3;
+	    } else {
+		spd = speed.calc(0);
+		mode = 4;
+	    }
 	}
     }
+    logging("AngMode",mode);
+    logging("AngSpd",spd);
     return spd;
 }
 
