@@ -98,6 +98,7 @@ bool stopLogging( const char* const varname )
     Logger* logr = findLogger(varname,false);
     if ( logr == NULL ) return false;
     logr->tobedumped = true;
+    return true;
 }
 
 // ログの初期化
@@ -157,7 +158,7 @@ int Logger::dumpTo( char* buf, int maxlen )
 	if ( dif < min ) min = dif;
 	if ( dif > max ) max = dif;
     }
-    int32_t offset = (min + max)/2 + (0x7e - 0x21)/2 + 0x22;
+    int32_t offset = (0x7e - 0x21)/2 + 0x22 - (min + max)/2;
     for ( int j = 1; j < maxlen; ++j ) {
 	int32_t dif = vals[j] - vals[j-1] + offset;
 	buf[j-1] = ( dif < 0x21 ) ? 0x21 : ( dif > 0x7e ) ? 0x7e : dif;

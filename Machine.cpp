@@ -46,6 +46,8 @@ void Machine::moveDirect( int forward, int turn )
 {
     int pwm_L = forward - turn;
     int pwm_R = forward + turn;
+    logging("forward",forward);
+    logging("turn",turn);
     leftMotor->setPWM(pwm_L);
     rightMotor->setPWM(pwm_R);
 }
