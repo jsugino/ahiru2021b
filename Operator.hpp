@@ -66,8 +66,8 @@ public:
     // Counter : この処理番号の実行回数 (０オリジン)
     int getCounter() { return slalomCounter; }
 
-    // Current Task : 現在の処理内容
-    void currentTask( const char* const message, ... );
+    // Current Sequence : 現在の処理内容
+    void currentSequence( const char* const message, ... );
 
     // Goto Next Status : 次の処理番号に進む
     void nextSequence( int falgs = 0 );
