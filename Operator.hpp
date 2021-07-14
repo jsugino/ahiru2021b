@@ -41,9 +41,9 @@ protected:
     void (Operator::*currentMethod)();
 public:
 #if defined(MAKE_RIGHT)
-    const int EDGE = -1;
+    static const int EDGE = -1;
 #else
-    const int EDGE = 1;
+    static const int EDGE = 1;
 #endif
     Operator( Machine* machine );
     bool operate();
@@ -85,6 +85,9 @@ public:
 
     // Relative Azimuth : リセット時からの相対方角
     int32_t getAzimuth() { return getAbsAzimuth() - slalomAzimuth; }
+
+    // Check Azimuth : 相対角度が一定の誤差範囲内か確認する
+    bool checkAzimuth( int32_t azi );
 
     // Reset Azimuth : 方角をリセットする
     void resetAzimuth() { slalomAzimuth = getAbsAzimuth(); }
