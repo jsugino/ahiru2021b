@@ -29,6 +29,7 @@ Operator::Operator( Machine* mcn ) {
 
     currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
     //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
+    //currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
     //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
     //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
@@ -290,41 +291,128 @@ void Operator::lineTraceDummy()
 	currentSequence("[Operator::lineTraceDummy] ライントレース終了");
 	nextMethod(&Operator::slalomOn);
     }
+}
 
-    /*
-    int32_t  distance = machine->distanceL + machine->distanceR;
+// 高速走行用のサンプルプログラム (成功率は低い)
+void Operator::lineTraceSample()
+{
+    int seqnum = 0;
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] ライントレース開始");
+	nextSequence(DIST|AZIMUTH);
 
-    // 最初から左エッジでライントレースする。
-    // 山中さんのコードができたら、削除する。
-    if ( distance < 27500 ) {
-	int forward;
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::lineTraceDummy] 第１直線") ) {
+	    startLogging("distL"); startLogging("distR"); startLogging("rgbR"); startLogging("turn");
+	}
+	lineTraceAt(80,&withR60);
+	if ( getCPDistance() > 4600-800 && machine->getRGB(1,0,0) < 45 ) nextSequence();
 
-	if ( distance < 4600-500 ) forward = 80;
-	else if ( distance < 6100 ) forward = 50; // 第1カーブ
-	else if ( distance < 7750 ) forward = 70;
-	else if ( distance < 9100 ) forward = 50; // 第2カーブ
-	else if ( distance < 10200 ) forward = 70;
-	else if ( distance < 11150 ) forward = 50; // 第3カーブ
-	else if ( distance < 12700 ) forward = 70;
-	else if ( distance < 13800 ) forward = 40; // 第4カーブ (きつい)
-	else if ( distance < 14600 ) forward = 70;
-	else if ( distance < 15450 ) forward = 40; // 第5カーブ (きつい)
-	else if ( distance < 17100 ) forward = 70;
-	else if ( distance < 17600 ) forward = 50; // 第6カーブ
-	else if ( distance < 18400 ) forward = 70;
-	else if ( distance < 20000+500 ) forward = 50; // 第7カーブ
-	else if ( distance < 25350-500 ) forward = 80;
-	else if ( distance < 27350 ) forward = 50; // 第8カーブ
-	else forward = 50;
+    } else if ( seqnum++ == getSequenceNumber() ) {
+#define CURV1SPEED 75
+	currentSequence("[Operator::lineTraceDummy] 第１カーブ");
+	curveTo(CURV1SPEED,-260);
+	//lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 6100 && machine->getRGB(1,0,0) < 55 ) nextSequence();
 
-	forward = machine->speed.calc(forward);
-	int turn = withR60.calcTurn(machine,forward);
-	machine->moveDirect(forward,turn);
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::lineTraceDummy] 第１カーブ後直線") ) {
+	}
+	lineTraceAt(CURV1SPEED,&withR60);
+	if ( getCPDistance() > 7500 && machine->getRGB(1,0,0) < 45 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+#define CURV2SPEED 67
+	if ( currentSequence("[Operator::lineTraceDummy] 第２カーブ前半") ) {
+	    stopLogging("distL"); stopLogging("distR"); stopLogging("rgbR"); stopLogging("turn");
+	    machine->azimuth.ratio(0.3,(100-CURV2SPEED));
+	}
+	moveAt(CURV2SPEED,(100-CURV2SPEED));
+	if ( getAzimuth() < -630 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::lineTraceDummy] 第２カーブ中盤") ) {
+	}
+	moveAt(CURV2SPEED,0);
+	if ( getAzimuth() < -700 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::lineTraceDummy] 第２カーブ後半") ) {
+	    machine->azimuth.ratio(0.1,20);
+	}
+	curveTo(CURV2SPEED,-770);
+	if ( getCPDistance() > 9100 && machine->getRGB(1,0,0) < 55 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第２カーブ後直線");
+	lineTraceAt(70,&withR60);
+	if ( getCPDistance() > 10200 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::lineTraceDummy] 第３カーブ") ) {
+	}
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 11150 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第３カーブ後直線");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 12700 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第４カーブ(きつい)");
+	lineTraceAt(40,&withR60);
+	if ( getCPDistance() > 13800 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第４カーブ後直線");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 14600 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第５カーブ(きつい)");
+	lineTraceAt(40,&withR60);
+	if ( getCPDistance() > 15450 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第５カーブ後直線");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 17100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第６カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 17600 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第６カーブ後直線");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 18400 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第７カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 20000+500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第７カーブ後直線");
+	lineTraceAt(80,&withR60);
+	if ( getCPDistance() > 25350-500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第８カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 27350 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第８カーブ後直線");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 27500 ) nextSequence();
+
     } else {
-	sequenceNumber = 0;
-	currentMethod = &Operator::slalomOn;
+	currentSequence("[Operator::lineTraceDummy] ライントレース終了");
+	nextMethod(&Operator::slalomOn);
     }
-    */
 }
 
 // 目的：逆エッジを使った走行を試して見るためのもの
@@ -400,12 +488,12 @@ void Operator::nextMethod( void (Operator::*next)() )
 }
 
 
-int Operator::moveAt( int spd )
+int Operator::moveAt( int spd, int turn )
 {
-    int speed = machine->speed.calc(spd);
-    machine->moveDirect(speed,0);
-    machine->azimuth.resetSpeed(0);
-    return speed;
+    spd = machine->speed.calc(spd);
+    turn = machine->azimuth.calcSpeed(turn);
+    machine->moveDirect(spd,turn);
+    return spd;
 }
 
 int Operator::curveTo( int spd, int azi )
@@ -421,7 +509,7 @@ int Operator::lineTraceAt( int spd, LineTraceLogic* logic )
 {
     spd = machine->speed.calc(spd);
     int turn = logic->calcTurn(machine,spd);
-    machine->azimuth.resetSpeed(turn);
+    machine->azimuth.setSpeed(turn);
     machine->moveDirect(spd,turn);
     return spd;
 }
@@ -545,7 +633,7 @@ void Operator::slalomOff()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] ライントレースする");
 	lineTraceAt(10,&withR30);
-	if ( getRelDistance() > 300 ) nextSequence(AZIMUTH); // 方角をリセットする
+	if ( getRelDistance() > 250 ) nextSequence(AZIMUTH); // 方角をリセットする
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] ライントレースしつつ黒線が切れるところを探す");

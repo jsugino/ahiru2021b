@@ -29,7 +29,7 @@ void Machine::initialize()
     distanceL = leftMotor->getCount();
     distanceR = rightMotor->getCount();
     speed.reset(0);
-    azimuth.reset(0);
+    azimuth.setSpeed(0);
 }
 
 bool Machine::detect() {
@@ -94,11 +94,6 @@ RampControler::RampControler()
     ratioB = 1;
 }
 
-void RampControler::reset( int cur )
-{
-    current = cur;
-}
-
 void RampControler::ratio( double ratio )
 {
     if ( ratio >= 1.0 ) {
@@ -126,11 +121,6 @@ int RampControler::calc( int target )
 Ramp2Controler::Ramp2Controler()
 {
     maxspeed = 0;
-}
-
-void Ramp2Controler::reset( int spd )
-{
-    speed.reset(spd);
 }
 
 void Ramp2Controler::ratio( double ratio, int max )

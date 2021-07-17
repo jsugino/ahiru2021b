@@ -34,7 +34,7 @@ private:
     int ratioB;
 public:
     RampControler();
-    void reset( int cur );
+    void reset( int cur ) { current = cur; }
     void ratio( double ratio );
     int calc( int newtarget );
     int getCurrent() { return current; }
@@ -47,10 +47,11 @@ private:
     int maxspeed;
 public:
     Ramp2Controler();
-    void reset( int speed );
-    void resetSpeed( int spd ) { speed.reset(spd); }
+    void setSpeed( int spd ) { speed.reset(spd); }
+    int getSpeed() { return speed.getCurrent(); }
     void ratio( double ratio, int max );
     int calc( int target );
+    int calcSpeed( int spd ) { return speed.calc(spd); }
 };
 
 class Machine {

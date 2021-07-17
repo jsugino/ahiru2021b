@@ -27,6 +27,7 @@ private:
     int32_t     courseMapindex;	
     /* トライ＆エラー用のプログラム */
     void lineTraceDummy();
+    void lineTraceSample();
     void slalomOnPrep();
     void reverseEdge();
     /* コースマップを使って走る */
@@ -104,8 +105,8 @@ public:
     // Relative Distance : 直前のシーケンスからの距離
     int32_t getRelDistance() { return getAbsDistance() - slalomPreviousDistance; }
 
-    // 指定された速度で直進する。返り値は台形制御後の速度
-    int moveAt( int spd );
+    // 指定された速度と指定された角速度で進行する。返り値は台形制御後の速度
+    int moveAt( int spd, int turn = 0 );
 
     // 指定された速度で、指定された方位に曲がる。返り値は台形制御後の角速度
     int curveTo( int spd, int azi );
