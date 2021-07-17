@@ -7,7 +7,7 @@
 #include "Operator.hpp"
 #include "Logger.hpp"
 #include "ahiru_common.hpp"
-#define LOG 100 
+#define LOG 100
 #define CHANGE_BLINDRUNNER 5000
 #define CHANGE_LINETRACE 7150
 
@@ -16,7 +16,7 @@ Operator::Operator( Machine* mcn ) {
     machine = mcn;
     distance = 0.0;
     prevAngL = prevAngR = 0;
-    logCnt = 0;	
+    logCnt = 0;
     courseMapindex =0;
     sequenceNumber = 0;
     slalomMessagedStatus = -1;
@@ -158,7 +158,7 @@ private:
     int threshold;
 public:
     WithRed( int thre, int edge );
-    virtual int calcTurn( rgb_raw_t* rgb, int speed );
+    virtual int calcTurn( Machine* machine, int speed );
     virtual ~WithRed();
 };
 
@@ -174,17 +174,11 @@ WithRed::~WithRed()
 }
 
 // PID制御のP制御のみを行う
-int WithRed::calcTurn( rgb_raw_t* rgb, int forward )
+int WithRed::calcTurn( Machine* machine, int forward )
 {
-    int turn = threshold - rgb->r; // 赤色だけを使用する
-    int turnmax;
-
+    int turn = threshold - machine->getRawRGB()->r; // 赤色だけを使用する
     turn = (int)(((double)turn)*((double)forward)/40.0);
-    turnmax = ev3api::Motor::PWM_MAX - (forward > 0 ? forward : -forward);
-    if ( turn < -turnmax ) turn = -turnmax;
-    if ( turn > +turnmax ) turn = +turnmax;
     if ( forward < 0 ) turn = -turn;
-
     return turn*edge;
 }
 
@@ -202,6 +196,102 @@ WithRed withR60rev(60,-Operator::EDGE);
 // ロボの初期位置：初期状態
 void Operator::lineTraceDummy()
 {
+    int seqnum = 0;
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] ライントレース開始");
+	nextSequence(DIST);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第１直線");
+	lineTraceAt(80,&withR60);
+	if ( getCPDistance() > 4600-500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第１カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 6100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第１カーブ後直線");
+	lineTraceAt(70,&withR60);
+	if ( getCPDistance() > 7750 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第２カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 9100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第２カーブ後直線");
+	lineTraceAt(70,&withR60);
+	if ( getCPDistance() > 10200 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第３カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 11150 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第３カーブ後直線");
+	lineTraceAt(70,&withR60);
+	if ( getCPDistance() > 12700 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第４カーブ(きつい)");
+	lineTraceAt(40,&withR60);
+	if ( getCPDistance() > 13800 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第４カーブ後直線");
+	lineTraceAt(70,&withR60);
+	if ( getCPDistance() > 14600 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第５カーブ(きつい)");
+	lineTraceAt(40,&withR60);
+	if ( getCPDistance() > 15450 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第５カーブ後直線");
+	lineTraceAt(70,&withR60);
+	if ( getCPDistance() > 17100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第６カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 17600 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第６カーブ後直線");
+	lineTraceAt(70,&withR60);
+	if ( getCPDistance() > 18400 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第７カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 20000+500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第７カーブ後直線");
+	lineTraceAt(80,&withR60);
+	if ( getCPDistance() > 25350-500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第８カーブ");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 27350 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::lineTraceDummy] 第８カーブ後直線");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 27500 ) nextSequence();
+
+    } else {
+	currentSequence("[Operator::lineTraceDummy] ライントレース終了");
+	nextMethod(&Operator::slalomOn);
+    }
+
+    /*
     int32_t  distance = machine->distanceL + machine->distanceR;
 
     // 最初から左エッジでライントレースする。
@@ -228,12 +318,13 @@ void Operator::lineTraceDummy()
 	else forward = 50;
 
 	forward = machine->speed.calc(forward);
-	int turn = withR60.calcTurn(machine->getRawRGB(),forward);
+	int turn = withR60.calcTurn(machine,forward);
 	machine->moveDirect(forward,turn);
     } else {
 	sequenceNumber = 0;
 	currentMethod = &Operator::slalomOn;
     }
+    */
 }
 
 // 目的：逆エッジを使った走行を試して見るためのもの
@@ -268,7 +359,7 @@ void Operator::reverseEdge()
 	} else {
 	    edge = EDGE; // 正エッジ
 	}
-	int turn = withR60.calcTurn(machine->getRawRGB(),forward)*edge;
+	int turn = withR60.calcTurn(machine,forward)*edge;
 	machine->moveDirect(forward,turn);
     } else {
 	sequenceNumber = 0;
@@ -277,15 +368,17 @@ void Operator::reverseEdge()
 }
 
 // ----------------------------------------------------------------------
-void Operator::currentSequence( const char* const message, ... )
+bool Operator::currentSequence( const char* const message, ... )
 {
+    ++slalomCounter;
     if ( slalomMessagedStatus != sequenceNumber ) {
 	va_list ap;
 	va_start(ap,message);
 	vlog(message,ap);
 	slalomMessagedStatus = sequenceNumber;
+	return true;
     }
-    ++slalomCounter;
+    return false;
 }
 
 // Goto Next Status : 次の処理番号に進む
@@ -327,7 +420,7 @@ int Operator::curveTo( int spd, int azi )
 int Operator::lineTraceAt( int spd, LineTraceLogic* logic )
 {
     spd = machine->speed.calc(spd);
-    int turn = logic->calcTurn(machine->getRawRGB(),spd);
+    int turn = logic->calcTurn(machine,spd);
     machine->azimuth.resetSpeed(turn);
     machine->moveDirect(spd,turn);
     return spd;

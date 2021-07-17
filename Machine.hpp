@@ -57,7 +57,6 @@ class Machine {
 private:
     ev3api::Motor*          leftMotor;
     ev3api::Motor*          rightMotor;
-    bool		    isGetRGB;
     rgb_raw_t               cur_rgb;
 protected:
 public:

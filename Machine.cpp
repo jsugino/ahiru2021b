@@ -35,7 +35,10 @@ void Machine::initialize()
 bool Machine::detect() {
     distanceL = leftMotor->getCount();
     distanceR = rightMotor->getCount();
-    isGetRGB = false;
+    colorSensor->getRawColor(cur_rgb);
+    logging("rgbR",cur_rgb.r);
+    logging("rgbG",cur_rgb.g);
+    logging("rgbB",cur_rgb.b);
     logging("distL",distanceL);
     logging("distR",distanceR);
 
@@ -44,6 +47,10 @@ bool Machine::detect() {
 
 void Machine::moveDirect( int forward, int turn )
 {
+    int turnmax = ev3api::Motor::PWM_MAX - (forward > 0 ? forward : -forward);
+    if ( turn < -turnmax ) turn = -turnmax;
+    if ( turn > +turnmax ) turn = +turnmax;
+
     int pwm_L = forward - turn;
     int pwm_R = forward + turn;
     logging("forward",forward);
@@ -54,13 +61,6 @@ void Machine::moveDirect( int forward, int turn )
 
 rgb_raw_t* Machine::getRawRGB()
 {
-    if ( !isGetRGB ) {
-	colorSensor->getRawColor(cur_rgb);
-	logging("rgbR",cur_rgb.r);
-	logging("rgbG",cur_rgb.g);
-	logging("rgbB",cur_rgb.b);
-	isGetRGB = true;
-    }
     return &cur_rgb;
 }
 

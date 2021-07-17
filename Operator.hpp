@@ -13,7 +13,7 @@
 class LineTraceLogic
 {
 public:
-    virtual int calcTurn( rgb_raw_t* rgb, int speed ) = 0;
+    virtual int calcTurn( Machine* rgb, int speed ) = 0;
 protected:
     virtual ~LineTraceLogic() = 0;
 };
@@ -67,7 +67,7 @@ public:
     int getCounter() { return slalomCounter; }
 
     // Current Sequence : 現在の処理内容
-    void currentSequence( const char* const message, ... );
+    bool currentSequence( const char* const message, ... );
 
     // Goto Next Status : 次の処理番号に進む
     void nextSequence( int falgs = 0 );
