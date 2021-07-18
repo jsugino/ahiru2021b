@@ -50,7 +50,7 @@ public:
     bool operate();
     //void waitForTouch();
     void lineTrace();
-    ~Operator();
+    virtual ~Operator();
 
     // 難所攻略用定義
 private:
@@ -120,9 +120,8 @@ public:
     void moveToBlock();
     void moveToGarage();
 
-    // 計測用のメソッド
-    void azimuthCheck();
-    void rampCheck();
+    // トライアル用のメソッド
+    virtual void trial();
 };
 
 struct courseSection {

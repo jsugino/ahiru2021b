@@ -19,12 +19,19 @@ Operator* operater;
 ://Observer* observer;
 #endif /* yamanaka_s */
 
+
+// Trial を使用しない場合は、次の #include を外す。
+#include "Trial.hpp"
+
 /* メインタスク */
 void main_task(intptr_t unused)
 {
     initlog();
     machine = new Machine();
-    operater = new Operator(machine);
+
+    // Trial を使用しない場合は、次の初期化を new Operater の方を生かす。
+    operater = new Trial(machine);
+    //operater = new Operator(machine);
 
     sta_cyc(CYC_LOG_TSK);
 

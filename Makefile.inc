@@ -5,6 +5,7 @@ APPL_COBJS +=
 APPL_CXXOBJS += \
     Machine.o \
     Operator.o \
+    Trial.o \
     Logger.o
 
 SRCLANG := c++

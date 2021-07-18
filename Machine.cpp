@@ -83,7 +83,7 @@ Machine::~Machine() {
     delete rightMotor;
     delete leftMotor;
 
-    log("Machine destructor");
+    printf("Machine destructor\n");
 }
 
 RampControler::RampControler()
