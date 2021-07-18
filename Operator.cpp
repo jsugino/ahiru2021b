@@ -29,7 +29,7 @@ Operator::Operator( Machine* mcn ) {
 
     currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
     //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
-    //currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
+    currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
     //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
     //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
@@ -324,21 +324,21 @@ void Operator::lineTraceSample()
     } else if ( seqnum++ == getSequenceNumber() ) {
 #define CURV2SPEED 67
 	if ( currentSequence("[Operator::lineTraceSample] 第２カーブ前半") ) {
-	    stopLogging("distL"); stopLogging("distR"); stopLogging("rgbR"); stopLogging("turn");
-	    machine->azimuth.ratio(0.3,(100-CURV2SPEED));
+	    machine->azimuth.ratio(0.3,(100-CURV2SPEED)); // 早いスピードで小回りする
 	}
 	moveAt(CURV2SPEED,(100-CURV2SPEED));
 	if ( getAzimuth() < -630 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	if ( currentSequence("[Operator::lineTraceSample] 第２カーブ中盤") ) {
+	    stopLogging("distL"); stopLogging("distR"); stopLogging("rgbR"); stopLogging("turn");
 	}
 	moveAt(CURV2SPEED,0);
 	if ( getAzimuth() < -700 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	if ( currentSequence("[Operator::lineTraceSample] 第２カーブ後半") ) {
-	    machine->azimuth.ratio(0.1,20);
+	    machine->azimuth.ratio(0.1,20); // デフォルトに戻す
 	}
 	curveTo(CURV2SPEED,-770);
 	if ( getCPDistance() > 9100 && machine->getRGB(1,0,0) < 55 ) nextSequence();
