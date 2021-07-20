@@ -15,6 +15,7 @@ public:
 
     // 台形制御測定用
     void rampTest();
+    void rampTestMid();
 
     virtual void trial();
 };

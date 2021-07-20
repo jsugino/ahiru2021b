@@ -3,12 +3,12 @@
 Trial::Trial( Machine* machine ) : Operator(machine)
 {
     printf("Trial constructor\n");
-    trialMethod = &Trial::rampTest;
+    trialMethod = &Trial::rampTestMid;
 }
 
 Trial::~Trial()
 {
-    printf("Operator destructor\n");
+    printf("Trial destructor\n");
 }
 
 void Trial::trial()
@@ -161,28 +161,180 @@ void Trial::rampCheck()
     }
 }
 
-// 台形制御の
+#define ANGLE -270*2
+#define SPEED 50
+
+class Ramp2ControlerA : public Ramp2Controler
+{
+protected:
+public:
+    Ramp2ControlerA();
+    int calc( int target );
+};
+
+Ramp2ControlerA::Ramp2ControlerA()
+{
+    toZero = 0;
+}
+
+// パラメーターの調整方法
+// 回転しすぎ → 大きくする
+// 回転不足   → 小さくする
+// 速度高が回転しすぎ、速度低が回転不足 → R1:大きく、R2:小さく
+// 速度低が回転しすぎ、速度高が回転不足 → R1:小さく、R2:大きく : Spd=70, 30
+#define RAMP2RATIO1 0.2
+#define RAMP2RATIO2 1.0
+#define RAMP2THRE2to1 3/2
+#define RAMP2THRE1to2 2/3
+#define RAMP2THRE2to3 2/3
+#define RAMP2THRE3to2 3/2
+
+int Ramp2ControlerA::calc( int target )
+{
+    int spd;
+    double cur = (double)speed.getCurrent();
+    if ( cur < 0 ) cur = -cur;
+    int threshold = cur * ( cur * RAMP2RATIO1 + RAMP2RATIO2 );
+    int mode = toZero < 0 ? -toZero : toZero;
+    int sign = target < 0 ? -1 : 1;
+    if ( toZero != 0 ) {
+	if ( target*toZero <= 0 ) {
+	    speed.reset(0);
+	    spd = 0;
+	    toZero = 0;
+	} else {
+	    switch ( mode ) {
+	    case 1:
+		if ( target*sign < threshold*RAMP2THRE1to2 ) mode = 2;
+		break;
+	    case 2:
+		if ( target*sign > threshold*RAMP2THRE2to1 ) mode = 1;
+		if ( target*sign < threshold*RAMP2THRE2to3 ) mode = 3;
+		break;
+	    case 3:
+		if ( target*sign > threshold*RAMP2THRE3to2 ) mode = 2;
+		break;
+	    }
+	    spd = speed.calc(0,mode-1);
+	    toZero =
+		( spd == 0 ) ? 0 :
+		( toZero < 0 ) ? -mode : mode;
+	}
+    } else if ( target == 0 ) { // toZero == 0
+	speed.reset(0);
+	spd = 0;
+    } else {
+	if ( target*sign > threshold ) {
+	    spd = speed.calc(-maxspeed*sign);
+	    toZero = 0;
+	} else {
+	    spd = speed.calc(0);
+	    toZero = sign*2;
+	}
+    }
+    logging("mode",toZero);
+    logging("thre",(int32_t)threshold);
+    return spd;
+}
+
+Ramp2ControlerA testCont;
+
+// 台形制御のパラメータを得る。
 void Trial::rampTest()
 {
     int seqnum = 0;
+    int Ang = ANGLE;
+    int Spd = SPEED;
+
     if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::rampTest] スタート");
 	nextSequence(DIST); // 距離をリセットする
-	startLogging("distL"); startLogging("distR"); startLogging("turn");
+	logging("thre",0); logging("mode",0);
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::rampTest] ライントレースする");
-#define RAMPSPEED 30
-	int spd = lineTraceAt(RAMPSPEED,withR60ptr);
-	if ( getRelDistance() > 500 && spd == RAMPSPEED ) nextSequence(AZIMUTH);
+	currentSequence("[Operator::rampTest] 低速でライントレースする");
+	lineTraceAt(10,withR60ptr);
+	if ( getRelDistance() > 300 ) nextSequence(AZIMUTH);
+
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::rampTest] カーブする");
-	curveTo(RAMPSPEED,-270);
-	if ( getRelDistance() > 1000 ) nextSequence();
+	currentSequence("[Operator::rampTest] 広場に出る");
+	int turn = curveTo(Spd,-270);
+	if ( getRelDistance() > Spd*5 && -2 <= turn && turn <= 2 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::rampTest] 広場に出る(継続)") ) {
+	    startLogging("distL"); startLogging("distR"); startLogging("turn");
+	    startLogging("thre"); startLogging("mode");
+	}
+	curveTo(Spd,-270);
+	if ( getRelDistance() > Spd*40 - 500 ) nextSequence(AZIMUTH);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::rampTest] カーブする") ) {
+	    testCont.ratio(0.1,20);
+	    testCont.setSpeed(0);
+	}
+	// int turn = machine->azimuth.calc(slalomAzimuth+azi-getAbsAzimuth());
+
+	int turn = testCont.calc(Ang-getAzimuth());
+	machine->moveDirect(Spd,turn);
+
+	//curveTo(Spd,Ang);
+
+	if ( getRelDistance() > Spd*50 ) nextSequence();
 
     } else {
 	currentSequence("[Operator::rampTest] ストップ");
-	startLogging("distL"); startLogging("distR"); startLogging("turn");
+	stopLogging("distL"); stopLogging("distR"); stopLogging("turn");
+	stopLogging("thre"); stopLogging("mode");
+	nextMethod(NULL);
+    }
+}
+
+// rampTestMid() からスタートする場合は、次のコマンドを実行する。
+// curl -X POST -H "Content-Type: application/json" -d '{"initLX":"2","initLY":"0","initLZ":"-9","initLROT":"0"}' http://localhost:54000
+void Trial::rampTestMid()
+{
+    int seqnum = 0;
+    int Spd = 40;
+    int Trn = 20;
+
+    logging("seqnum",getSequenceNumber());
+
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::rampTest] スタート");
+	nextSequence(DIST); // 距離をリセットする
+	logging("mode",0);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::rampTestMid] ライントレースする") ) {
+	    startLogging("distL"); startLogging("distR"); startLogging("rgbR"); startLogging("turn");
+	    startLogging("mode"); startLogging("seqnum");
+	}
+	lineTraceAt(30,withR60ptr);
+	logging("mode",0);
+	if ( getRelDistance() > Spd*20 ) nextSequence(AZIMUTH);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::rampTestMid] 広場でカーブする") ) {
+	}
+	//curveTo(Spd,-270*2);
+	moveAt(Spd,Trn); logging("mode",0);
+	if ( getAzimuth() < -270*2 ) { nextSequence();
+	}
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	if ( currentSequence("[Operator::rampTestMid] カーブする") ) {
+	    machine->azimuth.ratio(0.1,Trn);
+	}
+	curveTo(Spd,-270*4);
+
+	if ( getRelDistance() > (Spd*50 - Trn*100 + 4000) ) nextSequence();
+
+    } else {
+	currentSequence("[Operator::rampTestMid] ストップ");
+	stopLogging("distL"); stopLogging("distR"); stopLogging("rgbR"); stopLogging("turn");
+	stopLogging("mode"); stopLogging("seqnum");
 	nextMethod(NULL);
     }
 }

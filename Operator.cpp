@@ -32,7 +32,7 @@ Operator::Operator( Machine* mcn ) {
 
     currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
     //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
-    //currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
+    currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
     //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
     //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
@@ -304,56 +304,66 @@ void Operator::lineTraceSample()
     if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::lineTraceSample] ライントレース開始");
 	nextSequence(DIST|AZIMUTH);
+	logging("mode",machine->azimuth.toZero);
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	if ( currentSequence("[Operator::lineTraceSample] 第１直線") ) {
-	    startLogging("distL"); startLogging("distR"); startLogging("rgbR"); startLogging("turn");
+	    startLogging("distL"); startLogging("distR");
+	    startLogging("rgbR"); startLogging("turn");
+	    startLogging("seqnum"); startLogging("mode");
 	}
 	lineTraceAt(80,&withR60);
+	logging("mode",machine->azimuth.toZero);
 	if ( getCPDistance() > 4600-800 && machine->getRGB(1,0,0) < 45 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-#define CURV1SPEED 75
-	currentSequence("[Operator::lineTraceSample] 第１カーブ");
+#define CURV1SPEED 79
+	if ( currentSequence("[Operator::lineTraceSample] 第１カーブ") ) {
+	    machine->azimuth.ratio(0.3,(100-CURV1SPEED)); // 早いスピードで小回りする
+	}
 	curveTo(CURV1SPEED,-260);
 	//lineTraceAt(50,&withR60);
-	if ( getCPDistance() > 6100 && machine->getRGB(1,0,0) < 55 ) nextSequence();
+	if ( getCPDistance() > 6100 && machine->getRGB(1,0,0) < 70 ) { nextSequence();
+	    machine->azimuth.ratio(0.1,20); // デフォルトに戻す
+	}
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	if ( currentSequence("[Operator::lineTraceSample] 第１カーブ後直線") ) {
 	}
 	lineTraceAt(CURV1SPEED,&withR60);
-	if ( getCPDistance() > 7500 && machine->getRGB(1,0,0) < 45 ) nextSequence();
+	logging("mode",0);
+	if ( getCPDistance() > 7500 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-#define CURV2SPEED 67
+#define CURV2SPEED 68
 	if ( currentSequence("[Operator::lineTraceSample] 第２カーブ前半") ) {
 	    machine->azimuth.ratio(0.3,(100-CURV2SPEED)); // 早いスピードで小回りする
 	}
-	moveAt(CURV2SPEED,(100-CURV2SPEED));
-	if ( getAzimuth() < -630 ) nextSequence();
-
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	if ( currentSequence("[Operator::lineTraceSample] 第２カーブ中盤") ) {
-	    stopLogging("distL"); stopLogging("distR"); stopLogging("rgbR"); stopLogging("turn");
+	curveTo(CURV2SPEED,-770);
+	if ( getCPDistance() > 9100 && machine->getRGB(1,0,0) < 100 ) { nextSequence();
 	}
-	moveAt(CURV2SPEED,0);
-	if ( getAzimuth() < -700 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	if ( currentSequence("[Operator::lineTraceSample] 第２カーブ後半") ) {
+	    machine->azimuth.ratio(2,15); // 超高速で小回りする
+	}
+	moveAt(CURV2SPEED,15);
+	if ( getCounter() > 30 ) { nextSequence();
 	    machine->azimuth.ratio(0.1,20); // デフォルトに戻す
 	}
-	curveTo(CURV2SPEED,-770);
-	if ( getCPDistance() > 9100 && machine->getRGB(1,0,0) < 55 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::lineTraceSample] 第２カーブ後直線");
+	if ( currentSequence("[Operator::lineTraceSample] 第２カーブ後直線") ) {
+	}
 	lineTraceAt(70,&withR60);
+	logging("mode",0);
 	if ( getCPDistance() > 10200 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	if ( currentSequence("[Operator::lineTraceSample] 第３カーブ") ) {
+	    stopLogging("distL"); stopLogging("distR");
+	    stopLogging("rgbR"); stopLogging("turn");
+	    stopLogging("seqnum"); stopLogging("mode");
 	}
 	lineTraceAt(50,&withR60);
 	if ( getCPDistance() > 11150 ) nextSequence();
@@ -417,6 +427,7 @@ void Operator::lineTraceSample()
 	currentSequence("[Operator::lineTraceSample] ライントレース終了");
 	nextMethod(&Operator::slalomOn);
     }
+    logging("seqnum",getSequenceNumber());
 }
 
 // 目的：逆エッジを使った走行を試して見るためのもの
@@ -513,8 +524,8 @@ int Operator::lineTraceAt( int spd, LineTraceLogic* logic )
 {
     spd = machine->speed.calc(spd);
     int turn = logic->calcTurn(machine,spd);
+    turn = machine->moveDirect(spd,turn);
     machine->azimuth.setSpeed(turn);
-    machine->moveDirect(spd,turn);
     return spd;
 }
 

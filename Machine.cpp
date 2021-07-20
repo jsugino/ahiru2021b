@@ -45,7 +45,7 @@ bool Machine::detect() {
     return true;
 }
 
-void Machine::moveDirect( int forward, int turn )
+int Machine::moveDirect( int forward, int turn )
 {
     int turnmax = ev3api::Motor::PWM_MAX - (forward > 0 ? forward : -forward);
     if ( turn < -turnmax ) turn = -turnmax;
@@ -57,6 +57,7 @@ void Machine::moveDirect( int forward, int turn )
     logging("turn",turn);
     leftMotor->setPWM(pwm_L);
     rightMotor->setPWM(pwm_R);
+    return turn;
 }
 
 rgb_raw_t* Machine::getRawRGB()
@@ -105,7 +106,13 @@ void RampControler::ratio( double ratio )
     }
 }
 
-int RampControler::calc( int target )
+int RampControler::calc( int target, int count )
+{
+    for ( int i = 0; i < count; ++i ) calcSingle(target);
+    return current;
+}
+
+void RampControler::calcSingle( int target )
 {
     ++counter;
     if ( current < target ) {
@@ -115,12 +122,28 @@ int RampControler::calc( int target )
 	current -= (counter % ratioB) == 0 ? ratioA : 0;
 	if ( current < target ) current = target;
     }
-    return current;
+}
+
+// 階段状に変換する量の二乗に対する積分値の平均計算
+int calcInteg( int x, int r )
+{
+    return x * (r*3+1) / 3;
+}
+
+int calcIntegRev( int x, int r )
+{
+    return x * 3 / (r*3+1);
+}
+
+int RampControler::calcRatio( int x )
+{
+    return calcInteg(x,ratioB) / ratioA;
 }
 
 Ramp2Controler::Ramp2Controler()
 {
     maxspeed = 0;
+    toZero = 0;
 }
 
 void Ramp2Controler::ratio( double ratio, int max )
@@ -129,6 +152,83 @@ void Ramp2Controler::ratio( double ratio, int max )
     maxspeed = max;
 }
 
+// 以下のパラメーターは発見的に見つけている。
+
+// パラメーターの調整方法
+// 回転しすぎ → 大きくする
+// 回転不足   → 小さくする
+// 速度高が回転しすぎ、速度低が回転不足 → RATIO1:大きく、RATIO2:小さく
+// 速度低が回転しすぎ、速度高が回転不足 → RATIO1:小さく、RATIO2:大きく
+// 次のどちらか(もしくは、その中間)ぐらいが良さそう
+// RATIO1 = 0.25, RATIO2 = 0.0
+// RATIO1 = 0.24, RATIO2 = 0.1
+// RATIO1 = 0.20, RATIO2 = 1.0
+#define RAMP2RATIO1 1/4
+#define RAMP2RATIO2 0
+
+// ゼロに近づいて来たときに微調整するためのパラメータ
+// mode = 1 : ゆるやかな傾斜角
+//        2 : 通常の傾斜角
+//        3 : きつい傾斜角
+// THRE2to1 : 通常の傾斜角から、ゆるやかな傾斜角にするときの比率 ( > 1 )
+// THRE1to2 : ゆるやかな傾斜角から、通常の傾斜角に戻すときの比率 ( < 1 )
+// THRE2to3 : 通常の傾斜角から、きつい傾斜角にするときの比率 ( < 1 )
+// THRE3to2 : きつい傾斜角から、通常の傾斜角に戻すときの比率 ( > 1 )
+#define RAMP2THRE2to1 12/4
+#define RAMP2THRE1to2 3/4
+#define RAMP2THRE2to3 3/4
+#define RAMP2THRE3to2 5/4
+
+int Ramp2Controler::calc( int target )
+{
+    int spd;
+    int cur = speed.getCurrent();
+    if ( cur < 0 ) cur = -cur;
+    int threshold = cur*cur*RAMP2RATIO1 + cur*RAMP2RATIO2;
+    threshold = calcIntegRev(speed.calcRatio(threshold),10); // 標準が ratio = 1/10 として計算
+    int mode = toZero < 0 ? -toZero : toZero;
+    int sign = target < 0 ? -1 : 1;
+    if ( toZero != 0 ) {
+	if ( target*toZero <= 0 ) {
+	    speed.reset(0);
+	    spd = 0;
+	    toZero = 0;
+	} else {
+	    switch ( mode ) {
+	    case 1:
+		if ( target*sign < threshold*RAMP2THRE1to2 ) mode = 2;
+		break;
+	    case 2:
+		if ( target*sign > threshold*RAMP2THRE2to1 ) mode = 1;
+		if ( target*sign < threshold*RAMP2THRE2to3 ) mode = 3;
+		break;
+	    case 3:
+		if ( target*sign > threshold*RAMP2THRE3to2 ) mode = 2;
+		break;
+	    }
+	    spd = speed.calc(0,mode-1);
+	    toZero =
+		( spd == 0 ) ? 0 :
+		( toZero < 0 ) ? -mode : mode;
+	}
+    } else if ( target == 0 ) { // toZero == 0
+	speed.reset(0);
+	spd = 0;
+    } else {
+	if ( target*sign > threshold ) {
+	    spd = speed.calc(-maxspeed*sign);
+	    toZero = 0;
+	} else {
+	    spd = speed.calc(0);
+	    toZero = sign*2;
+	}
+    }
+    logging("mode",toZero);
+    logging("thre",(int32_t)threshold);
+    return spd;
+}
+
+/*
 // このパラメーターは発見的に見つけている。
 #define RAMP2RATIO1 0.3
 #define RAMP2RATIO2 1.0
@@ -146,25 +246,25 @@ int Ramp2Controler::calc( int target )
 	if ( target > 0 ) {
 	    if ( target > threshold ) {
 		spd = speed.calc(-maxspeed);
-		mode = 1;
+		mode = 2;
 	    } else {
 		spd = speed.calc(0);
-		mode = 2;
+		mode = 1;
 	    }
 	} else { // target < 0
 	    if ( -target > threshold ) {
 		spd = speed.calc(maxspeed);
-		mode = 3;
+		mode = -2;
 	    } else {
 		spd = speed.calc(0);
-		mode = 4;
+		mode = -1;
 	    }
 	}
     }
-    logging("AngMode",mode);
-    logging("AngSpd",spd);
+    logging("mode",mode);
     return spd;
 }
+*/
 
 void AngleMotor::setAngle( int32_t targetAngle )
 {

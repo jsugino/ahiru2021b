@@ -36,16 +36,19 @@ public:
     RampControler();
     void reset( int cur ) { current = cur; }
     void ratio( double ratio );
-    int calc( int newtarget );
+    int calc( int newtarget, int count = 1 );
+    void calcSingle( int newtarget );
     int getCurrent() { return current; }
+    int calcRatio( int x );
 };
 
 // ２次の台形制御のクラス
 class Ramp2Controler {
-private:
+protected:
     RampControler speed;
     int maxspeed;
 public:
+    int toZero;
     Ramp2Controler();
     void setSpeed( int spd ) { speed.reset(spd); }
     int getSpeed() { return speed.getCurrent(); }
@@ -75,7 +78,7 @@ public:
 
     RampControler           speed;
     Ramp2Controler          azimuth;
-    void moveDirect( int forward, int turn );
+    int moveDirect( int forward, int turn );
 
     rgb_raw_t* getRawRGB();
     int getRGB( int ratioR = 1, int ratioG = 1, int ratioB = 1, bool average = false );
