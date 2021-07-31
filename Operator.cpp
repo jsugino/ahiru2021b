@@ -542,12 +542,12 @@ void Operator::slalomOn()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 板にぶつかるまでライントレースする");
 	lineTraceAt(30,&withR60);
-	if ( getCounter() > 1000 ) nextSequence(); // 4ms x 1000 秒たったら次へ
-
+	if ( getCounter() > 800 ) nextSequence(); // 4ms x 800 秒たったら次へ
+	 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 姿勢を揃える");
 	moveAt(10);
-	if ( getCounter() > 1000 ) nextSequence(); // 4ms x 1000 秒たったら次へ
+	if ( getCounter() > 200 ) nextSequence(); // 4ms x 200 秒たったら次へ
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 徐々に速度を下げる");
@@ -556,60 +556,61 @@ void Operator::slalomOn()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] バックする");
-	moveAt(-10);
-	if ( getCPDistance() < -300 ) nextSequence(); // チェックポイントの後方 -300 まで来たら次へ
+	moveAt(-20);
+	if ( getCPDistance() < -280 ) nextSequence(); // チェックポイントの後方 -280 まで来たら次へ
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] アームを上げつつつ前進する");
 	machine->armMotor->setAngle(-20);
 	moveAt(50);
-	if ( getCPDistance() > 300 ) nextSequence(); // チェックポイントの前方 300 まで来たら次へ
+	if ( getCPDistance() > 250 ) nextSequence(); // チェックポイントの前方 250 まで来たら次へ
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] アームをおろしつつ減速しライントレースする");
 	machine->armMotor->setAngle(-50);
-	int speed = lineTraceAt(0,&withR30);
-	if ( speed == 0 ) nextSequence(); // 停止したら次へ
+	int speed = lineTraceAt(10,&withR30);
+	//if ( speed == 0 ) nextSequence(); // 停止したら次へ
+ 	if ( getCPDistance() > 500 ) nextSequence(); // チェックポイントから 650 まで来たら次へ
 
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOn] 逆走する");
-	moveAt(-10);
-	if ( getCPDistance() < 650 ) nextSequence(); // チェックポイントから 650 までバックしたら次へ
+	//} else if ( seqnum++ == getSequenceNumber() ) {
+	//currentSequence("[Operator::slalomOn] 逆走する");
+	//moveAt(-10);
+	//if ( getCPDistance() < 650 ) nextSequence(); // チェックポイントから 650 までバックしたら次へ
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 前進しつつライントレースする");
-	lineTraceAt(10,&withR30);
-	if ( getCPDistance() > 950 ) nextSequence(AZIMUTH); // チェックポイントから 950 まで来たら、角度をリセットして次へ
+	lineTraceAt(20,&withR30);
+	if ( getCPDistance() > 870 ) nextSequence(AZIMUTH); // チェックポイントから 870 まで来たら、角度をリセットして次へ
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 右に移動");
-	curveTo(10,120);
-	if ( getRelDistance() > 330 ) nextSequence();
+	curveTo(20,120);
+	if ( getRelDistance() > 225 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 直進");
-	curveTo(10,0);
-	if ( getRelDistance() > 240 ) nextSequence();
+	curveTo(20,0);
+	if ( getRelDistance() > 230 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 左に移動");
-	curveTo(10,-120);
+	curveTo(20,-120);
 	if ( getRelDistance() > 520 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 直進");
-	curveTo(10,0);
-	if ( getRelDistance() > 300 ) nextSequence();
+	curveTo(20,0);
+	if ( getRelDistance() > 380 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 右に移動");
-	curveTo(10,120);
-	if ( getRelDistance() > 430 ) nextSequence();
+	curveTo(20,120);
+	if ( getRelDistance() > 300 ) nextSequence();
 
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOn] 直進");
-	curveTo(10,0);
-	if ( getCPDistance() > 2800 ) nextSequence();
+    //} else if ( seqnum++ == getSequenceNumber() ) {
+	//currentSequence("[Operator::slalomOn] 直進");
+	//curveTo(20,0);
+	//if ( getCPDistance() > 2800 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] スラローム前半終了");
@@ -632,75 +633,82 @@ void Operator::slalomOff()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] 左に向きつつ黒線を探す");
-	curveTo(10,-90);
+	curveTo(20,-90);
 	if ( machine->getRGB() < 30 ) nextSequence();
 
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] そのまま少し進む");
-	curveTo(10,-90);
-	if ( getRelDistance() > 100 ) nextSequence();
+//   } else if ( seqnum++ == getSequenceNumber() ) {
+//	currentSequence("[Operator::slalomOff] そのまま少し進む");
+//	curveTo(20,-90);
+//	if ( getRelDistance() > 100 ) nextSequence();
 
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] 前方を向く");
-	curveTo(10,0);
-	if ( checkAzimuth(0) ) nextSequence();
+//    } else if ( seqnum++ == getSequenceNumber() ) {
+//	currentSequence("[Operator::slalomOff] 前方を向く");
+//	curveTo(20,0);
+//	if ( checkAzimuth(0) ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] ライントレースする");
-	lineTraceAt(10,&withR30);
+	lineTraceAt(20,&withR30);
 	if ( getRelDistance() > 250 ) nextSequence(AZIMUTH); // 方角をリセットする
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] ライントレースしつつ黒線が切れるところを探す");
-	lineTraceAt(10,&withR30);
-	if ( machine->getRGB() > 80 ) nextSequence(DIST); // 距離をリセットする
+	lineTraceAt(20,&withR30);
+	if ( machine->getRGB() > 120 ) nextSequence(DIST); // 距離をリセットする
+
+    //} else if ( seqnum++ == getSequenceNumber() ) {
+	//currentSequence("[Operator::slalomOff] 少しバックしつつ角度調整する");
+	//curveTo(-20,0);
+	//if ( getCPDistance() < -50 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] 少しバックしつつ角度調整する");
-	curveTo(-10,0);
-	if ( getCPDistance() < -50 ) nextSequence();
-
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] 90度回転する");
-	curveTo(0,260);
-	if ( checkAzimuth(260) ) nextSequence();
-
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] 直進");
-	curveTo(10,260);
-	if ( getRelDistance() > 500 ) nextSequence();
-
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] 右に移動");
-	curveTo(10,260+150);
-	if ( getRelDistance() > 400 ) nextSequence();
+	currentSequence("[Operator::slalomOff] バックしながら90度以上回転する");
+	curveTo(-10,330);
+	if ( checkAzimuth(320) ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] 直進");
-	curveTo(10,260);
-	if ( getCPDistance() > 1000 ) nextSequence();
+	curveTo(20,330);
+	if ( getRelDistance() > 650 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] 少しバックする");
-	moveAt(-10);
-	if ( getCPDistance() < 950 ) nextSequence();
+	currentSequence("[Operator::slalomOff] さらに右に移動");
+	curveTo(20,370);
+	if ( getRelDistance() > 250 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] ライントレースせずに加速してアームを上げる");
 	machine->armMotor->setAngle(-20);
-	moveAt(50);
+	currentSequence("[Operator::slalomOff] アーム上げて直進");
+	curveTo(50,330);
+	if ( getRelDistance() > 800 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::slalomOff] アーム下げて直進");
+	machine->armMotor->setAngle(-50);
+	curveTo(30,310);
 	if ( getCPDistance() > 1500 ) nextSequence();
 
-    } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::slalomOff] ライントレースせずに停止してアームを下げる");
-	machine->armMotor->setAngle(-50);
-	int speed = moveAt(0);
-	if ( speed == 0 ) nextSequence();
+    //} else if ( seqnum++ == getSequenceNumber() ) {
+	//currentSequence("[Operator::slalomOff] 少しバックする");
+	//moveAt(-20);
+	//if ( getCPDistance() < 950 ) nextSequence();
+
+    //} else if ( seqnum++ == getSequenceNumber() ) {
+	//currentSequence("[Operator::slalomOff] ライントレースせずに加速してアームを上げる");
+	//machine->armMotor->setAngle(-20);
+	//moveAt(50);
+	//if ( getCPDistance() > 1500 ) nextSequence();
+
+    //} else if ( seqnum++ == getSequenceNumber() ) {
+	//currentSequence("[Operator::slalomOff] ライントレースせずに停止してアームを下げる");
+	//machine->armMotor->setAngle(-50);
+	//int speed = moveAt(0);
+	//if ( speed == 0 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] ブロックの方に向く");
-	curveTo(0,520);
-	if ( checkAzimuth(520) ) nextSequence();
+	curveTo(0,540);
+	if ( checkAzimuth(540) ) nextSequence();
 
     } else {
 	currentSequence("[Operator::slalomOff] スラローム後半終了");
