@@ -32,8 +32,8 @@ Operator::Operator( Machine* mcn ) {
 
     currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
     //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
-    currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
-    //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
+    //currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
+    currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
     //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
     //currentMethod = &Operator::moveToGarage; // 難所「ガレージで停止」攻略用
@@ -707,8 +707,8 @@ void Operator::slalomOff()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] ブロックの方に向く");
-	curveTo(0,540);
-	if ( checkAzimuth(540) ) nextSequence();
+	curveTo(0,580);
+	if ( checkAzimuth(580)) nextSequence();
 
     } else {
 	currentSequence("[Operator::slalomOff] スラローム後半終了");
