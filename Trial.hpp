@@ -17,5 +17,8 @@ public:
     void rampTest();
     void rampTestMid();
 
+    // 超音波センサー値確認用
+    void sonarTest();
+
     virtual void trial();
 };

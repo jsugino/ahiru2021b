@@ -36,11 +36,13 @@ bool Machine::detect() {
     distanceL = leftMotor->getCount();
     distanceR = rightMotor->getCount();
     colorSensor->getRawColor(cur_rgb);
+    sonarDist = sonarSensor->getDistance();
     logging("rgbR",cur_rgb.r);
     logging("rgbG",cur_rgb.g);
     logging("rgbB",cur_rgb.b);
     logging("distL",distanceL);
     logging("distR",distanceR);
+    logging("distS",sonarDist);
 
     return true;
 }

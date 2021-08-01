@@ -3,7 +3,8 @@
 Trial::Trial( Machine* machine ) : Operator(machine)
 {
     printf("Trial constructor\n");
-    trialMethod = &Trial::rampTestMid;
+    //trialMethod = &Trial::rampTestMid;
+    trialMethod = &Trial::sonarTest;
 }
 
 Trial::~Trial()
@@ -335,6 +336,53 @@ void Trial::rampTestMid()
 	currentSequence("[Operator::rampTestMid] ストップ");
 	stopLogging("distL"); stopLogging("distR"); stopLogging("rgbR"); stopLogging("turn");
 	stopLogging("mode"); stopLogging("seqnum");
+	nextMethod(NULL);
+    }
+}
+
+// sonarTest() からスタートする場合は、次のコマンドを実行する。
+// curl -X POST -H "Content-Type: application/json" -d '{"initLX":"24.2","initLY":"0.0","initLZ":"8.0","initLROT":"180"}' http://localhost:54000
+void Trial::sonarTest()
+{
+    logging("seqnum",getSequenceNumber());
+
+    int seqnum = 0;
+
+    logging("seqnum",getSequenceNumber());
+
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Trial::sonarTest] スタート");
+	nextSequence(DIST); // 距離をリセットする
+	startLogging("distL"); startLogging("distR"); startLogging("distS");
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Trial::sonarTest] ライントレースする");
+	lineTraceAt(30,withR60ptr);
+	if ( getRelDistance() > 500 ) nextSequence(AZIMUTH);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Trial::sonarTest] そのまま直進する");
+	curveTo(30,0); // 角度0で直進
+	if ( machine->sonarDist < 20 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Trial::sonarTest] ゆっくり直進する");
+	curveTo(10,0); // 角度0で直進
+	if ( machine->sonarDist < 10 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Trial::sonarTest] ソナーは使わずに直進する");
+	curveTo(10,0); // 角度0で直進
+	if ( getRelDistance() > 130 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Trial::sonarTest] 停止する");
+	int spd = moveAt(0);
+	if ( spd == 0 ) nextSequence();
+
+    } else {
+	stopLogging("distL"); stopLogging("distR"); stopLogging("distS");
+	currentSequence("[Trial::sonarTest] 終了");
 	nextMethod(NULL);
     }
 }

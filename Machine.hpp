@@ -75,6 +75,7 @@ public:
     ev3api::Clock*          clock;
 
     int32_t distanceL, distanceR;
+    int16_t sonarDist;
 
     RampControler           speed;
     Ramp2Controler          azimuth;
