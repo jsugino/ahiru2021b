@@ -363,12 +363,12 @@ void Trial::sonarTest()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Trial::sonarTest] そのまま直進する");
 	curveTo(30,0); // 角度0で直進
-	if ( machine->sonarDist < 20 ) nextSequence();
+	if ( machine->getSonar() < 20 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Trial::sonarTest] ゆっくり直進する");
 	curveTo(10,0); // 角度0で直進
-	if ( machine->sonarDist < 10 ) nextSequence();
+	if ( machine->getSonar() < 10 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Trial::sonarTest] ソナーは使わずに直進する");

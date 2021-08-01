@@ -76,6 +76,7 @@ public:
 
     int32_t distanceL, distanceR;
     int16_t sonarDist;
+    int getSonar() { return (int)sonarDist; }
 
     RampControler           speed;
     Ramp2Controler          azimuth;
