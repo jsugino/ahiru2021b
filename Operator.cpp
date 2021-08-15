@@ -590,7 +590,7 @@ void Operator::slalomOn()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 直進");
 	curveTo(20,0);
-	if ( getRelDistance() > 230 ) nextSequence();
+	if ( getRelDistance() > 225 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 左に移動");
@@ -600,17 +600,20 @@ void Operator::slalomOn()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 直進");
 	curveTo(20,0);
-	if ( getRelDistance() > 380 ) nextSequence();
+	if ( getRelDistance() > 200 ) nextSequence();
+	//if ( getRelDistance() > 400 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] 右に移動");
 	curveTo(20,120);
-	if ( getRelDistance() > 300 ) nextSequence();
+	//if ( getRelDistance() > 200 ) nextSequence();
+	if ( getRelDistance() > 400 ) nextSequence();
 
-    //} else if ( seqnum++ == getSequenceNumber() ) {
-	//currentSequence("[Operator::slalomOn] 直進");
-	//curveTo(20,0);
-	//if ( getCPDistance() > 2800 ) nextSequence();
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::slalomOn] 直進");
+	curveTo(20,0);
+	//if ( getRelDistance() > 50 ) nextSequence();
+	if ( getRelDistance() > 430 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOn] スラローム前半終了");
@@ -674,7 +677,7 @@ void Operator::slalomOff()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::slalomOff] さらに右に移動");
 	curveTo(20,370);
-	if ( getRelDistance() > 250 ) nextSequence();
+	if ( getRelDistance() > 260 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	machine->armMotor->setAngle(-20);
@@ -724,46 +727,54 @@ void Operator::moveToBlock()
     int seqnum = 0;
     if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] ブロックの直前へ移動開始");
+//ログ
+//        startLogging("distL");
+//        startLogging("distR");
+//        startLogging("rgbR");
+//        startLogging("rgbG");
+//       startLogging("rgbB");
+//        startLogging("seqnum");
 	nextSequence(AZIMUTH|DIST); // 方角と距離をリセットする
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] １つめの黒線を見つけるまで進む");
-	curveTo(20,30);
-	if ( machine->getRGB() < 30 ) nextSequence(DIST); // 距離をリセットする
+	curveTo(30,0);
+	if ( machine->getRGB() < 200 ) nextSequence(DIST); // 距離をリセットする
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] 少しの間だけ黒線を無視して右に向く");
-	curveTo(20,260);
+	curveTo(10,270);
 	if ( getCPDistance() > 100 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] 右に向きつつ２つめの黒線を見つけるまで進む");
-	curveTo(20,260);
+	curveTo(30,280);
 	if ( machine->getRGB() < 30 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] 前方を向く");
-	curveTo(-7,0);
+	curveTo(0,-270);
 	if ( checkAzimuth(0) ) nextSequence(DIST); // 距離をリセットする
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::moveToBlock] ライントレースする");
-	lineTraceAt(10,&withR60);
-	if ( getCPDistance() > 400 ) nextSequence(AZIMUTH); // 角度をリセットする
-
+	currentSequence("[Operator::moveToBlock] 直進する");
+	//lineTraceAt(20,&withR60);
+	moveAt(20);
+	if ( getCPDistance() > 620 ) nextSequence(AZIMUTH); // 角度をリセットする
+/*
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] ブロックをキャッチしに行く");
-	curveTo(10,0);
-	if ( getCPDistance() > 1000 ) nextSequence();
-
+	curveTo(20,0);
+	if ( getCPDistance() > 600 ) nextSequence();
+*/
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] 左に移動");
-	curveTo(10,-270);
-	if ( getCPDistance() > 1800 ) nextSequence();
+	curveTo(20,-200);
+	if ( getCPDistance() > 1350 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToBlock] 戻る");
-	curveTo(10,-540);
+	curveTo(15,-540);
 	if ( checkAzimuth(-540) ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
@@ -783,20 +794,20 @@ void Operator::moveToGarage()
 	nextSequence(AZIMUTH|DIST); // 方角と距離をリセットする
 
     } else if ( seqnum++ == getSequenceNumber() ) {
-	currentSequence("[Operator::moveToGarage] ゆっくりとブロックをキャッチする");
-	curveTo(10,0);
-	if ( getCPDistance() > 500 ) nextSequence();
-
-    } else if ( seqnum++ == getSequenceNumber() ) {
 #define FORWARDANGLE -30
-	currentSequence("[Operator::moveToGarage] すこし左カープする");
-	curveTo(10,FORWARDANGLE);
+	currentSequence("[Operator::moveToGarage] ゆっくりとブロックをキャッチする");
+	curveTo(0,FORWARDANGLE);
+	nextSequence();
+  
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::moveToGarage] 左カープする");
+	curveTo(50,-20);
 	if ( getCPDistance() > 300 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] 早くブロックを運ぶ");
 	curveTo(50,FORWARDANGLE);
-	if ( getCPDistance() > 1800 ) nextSequence();
+	if ( getCPDistance() > 1700 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] ゆっくりブロックを運びつつ黒線を探す");
@@ -813,15 +824,15 @@ void Operator::moveToGarage()
 	curveTo(20,-270);
 	if ( getRelDistance() > 150 ) nextSequence();
 
-    } else if ( seqnum++ == getSequenceNumber() ) {
+     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] 右カープする");
-	curveTo(20,0);
-	if ( getRelDistance() > 450 ) nextSequence();
+	curveTo(10,0);
+	if ( getRelDistance() > 500 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] 右カープし反転する");
-	curveTo(10,270);
-	if ( getRelDistance() > 400 ) nextSequence();
+	curveTo(10,360);
+	if ( getRelDistance() > 420 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] 少し右を向きブロックを戻す");
@@ -840,8 +851,8 @@ void Operator::moveToGarage()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] 左回転する");
-	curveTo(0,270);
-	if ( checkAzimuth(270) ) nextSequence();
+	curveTo(0,300);
+	if ( checkAzimuth(300) ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] ライントレースする");
@@ -850,13 +861,13 @@ void Operator::moveToGarage()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] ライントレースする(継続)");
-	lineTraceAt(10,&withR60);
-	if ( machine->getRGB(1,1,1) > 300 ) nextSequence();
+	lineTraceAt(20,&withR60);
+	if ( machine->getRGB(1,1,1) > 200 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] そのまま直進する");
-	moveAt(10);
-	if ( getRelDistance() > 450 ) nextSequence();
+	moveAt(15);
+	if ( getRelDistance() > 550 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::moveToGarage] 停止する");
