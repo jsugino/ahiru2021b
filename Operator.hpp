@@ -28,6 +28,7 @@ private:
     /* トライ＆エラー用のプログラム */
     void lineTraceDummy();
     void lineTraceSample();
+    void shortCut();
     void slalomOnPrep();
     void reverseEdge();
     /* コースマップを使って走る */

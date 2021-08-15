@@ -31,9 +31,10 @@ Operator::Operator( Machine* mcn ) {
     machine->azimuth.ratio(0.1,20); // 最大角速度は 20 に決め打ち。
 
     currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
-    //currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
+    currentMethod = &Operator::shortCut; // 固定走行中心に実行する。
+    currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
     //currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
-    currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
+    //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
     //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
     //currentMethod = &Operator::moveToGarage; // 難所「ガレージで停止」攻略用
@@ -295,6 +296,110 @@ void Operator::lineTraceDummy()
 	currentSequence("[Operator::lineTraceDummy] ライントレース終了");
 	nextMethod(&Operator::slalomOn);
     }
+}
+
+// 決め打ち走行(モデル資料記述用)
+void Operator::shortCut()
+{
+    int seqnum = 0;
+    if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] ライントレース開始");
+	nextSequence(DIST|AZIMUTH);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 第１直線前半");
+	lineTraceAt(50,&withR60);
+	if ( getCPDistance() > 500 ) nextSequence(AZIMUTH);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 第１直線後半");
+	curveTo(80,0);
+	if ( getCPDistance() > 4100 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 第１カーブ");
+	curveTo(80,-270);
+	if ( getRelDistance() > 3000 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+#define CUT2SPEED 60
+	if ( currentSequence("[Operator::shortCut] 第２カーブ") ) {
+	    machine->azimuth.ratio(0.1,(100-CUT2SPEED)); // 早いスピードで小回りする
+	}
+	curveTo(CUT2SPEED,-780);
+	if ( getRelDistance() > 2300 ) {
+	    nextSequence();
+	    machine->azimuth.ratio(0.1,20); // もとに戻す
+	}
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 第３カーブ");
+	curveTo(80,-540);
+	if ( getRelDistance() > 500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] ショートカット開始");
+	curveTo(80,-330);
+	if ( getRelDistance() > 2600 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] ショートカット終了");
+	curveTo(80,-540);
+	if ( getRelDistance() > 700 ) nextSequence();
+    } else if ( seqnum++ == getSequenceNumber() ) {
+#define CUT6SPEED 70
+	if ( currentSequence("[Operator::shortCut] 第６カーブ") ) {
+	    machine->azimuth.ratio(0.1,(100-CUT6SPEED)); // 早いスピードで小回りする
+	}
+	curveTo(CUT6SPEED,-800);
+	if ( getRelDistance() > 1400 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 第７カーブ前半");
+	curveTo(CUT6SPEED,-290);
+	if ( getAzimuth() > -400 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 第７カーブ後半");
+	curveTo(CUT6SPEED,-290);
+	if ( machine->getRGB(1,0,0) < 40  ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 左エッジを探す");
+	curveTo(CUT6SPEED,-290);
+	if ( machine->getRGB(1,0,0) > 50 ) {
+	    nextSequence();
+	    machine->azimuth.ratio(0.1,20); // デフォルトに戻す
+	}
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] ライントレース開始");
+	lineTraceAt(50,&withR60);
+	if ( getRelDistance() > 500 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] 加速して青線を見つける");
+	lineTraceAt(80,&withR60);
+	if ( machine->getRGB(-24,10,10) > 300 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] ゴール直後の青線上");
+	lineTraceAt(80,&withR60);
+	if ( machine->getRGB(-24,10,10) < 300 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] カーブ後の青線を見つける");
+	lineTraceAt(50,&withR60);
+	if ( machine->getRGB(-24,10,10) > 300 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+	currentSequence("[Operator::shortCut] カーブ後の青線上");
+	lineTraceAt(50,&withR60);
+	if ( machine->getRGB(-24,10,10) < 300 ) nextSequence();
+
+    } else {
+	currentSequence("[Operator::shortCut] ライントレース終了");
+	nextMethod(&Operator::slalomOn);
+    }
+    logging("seqnum",getSequenceNumber());
 }
 
 // 高速走行用のサンプルプログラム (成功率は低い)
