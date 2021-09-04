@@ -641,8 +641,6 @@ int Operator::lineTraceAt( int spd, LineTraceLogic* logic )
     return spd;
 }
 
-//sasa★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
 // slalomAvoid() からスタートする場合は、次のコマンドを実行する。
 // 左コース用：
 // curl -X POST -H "Content-Type: application/json" -d '{"initLX":"8.0","initLY":"0","initLZ":"15.5","initLROT":"90"}' http://localhost:54000
@@ -713,7 +711,7 @@ void Operator::slalomAvoid()
     
     }else if ( seqnum++ == getSequenceNumber() ) {
     currentSequence("[Operator::slalomAvoid] ガレージ方向を向く");
-    curveTo(0,360);
+    curveTo(2,360);
     if ( checkAzimuth(360) ) nextSequence(); 
 
     } else if ( seqnum++ == getSequenceNumber() ) {
@@ -744,19 +742,19 @@ void Operator::slalomAvoid()
     }else if ( seqnum++ == getSequenceNumber() ) {
     currentSequence("[Operator::slalomAvoid] 距離10 直進モード");
 	moveAt(10);
-	if ( machine->getSonar() < 5 )nextSequence();
+	if ( machine->getSonar() < 4 )nextSequence();
 
     }else if ( seqnum++ == getSequenceNumber() ) {
-    currentSequence("[Operator::slalomAvoid] 距離5 停止");
+    currentSequence("[Operator::slalomAvoid] 距離4 停止");
 	moveAt(0);
+    if ( getCounter() > 1000 ) nextSequence(); // 4ms x 1000 秒たったら次へ
 
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 走行完了");
+	nextMethod(NULL);
     } 
 
 }
-
-
-//sasa end
-
 
 // slalomOn() からスタートする場合は、次のコマンドを実行する。
 // 左コース用：
