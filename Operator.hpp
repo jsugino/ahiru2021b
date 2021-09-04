@@ -116,6 +116,7 @@ public:
     int lineTraceAt( int spd, LineTraceLogic* logic );
 
     // 難所攻略用メソッド
+    void slalomAvoid();
     void slalomOn();
     void slalomOff();
     void moveToBlock();

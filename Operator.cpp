@@ -11,6 +11,7 @@
 #define CHANGE_BLINDRUNNER 5000
 #define CHANGE_LINETRACE 7150
 
+
 // Trial を使用しない場合は、次の #include を外す。
 #include "Trial.hpp"
 
@@ -30,10 +31,11 @@ Operator::Operator( Machine* mcn ) {
     machine->speed.ratio(0.1);
     machine->azimuth.ratio(0.1,20); // 最大角速度は 20 に決め打ち。
 
-    currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
-    currentMethod = &Operator::shortCut; // 固定走行中心に実行する。
+    //currentMethod = &Operator::lineTrace; // 通常走行から固定走行をする。
+    //currentMethod = &Operator::shortCut; // 固定走行中心に実行する。
     currentMethod = &Operator::lineTraceDummy; // 通常走行のみ版
     //currentMethod = &Operator::lineTraceSample; // 決め打ち走行のサンプル
+	//currentMethod = &Operator::slalomAvoid; // 難所「スラローム回避」攻略用
     //currentMethod = &Operator::slalomOn; // 難所「板の前半」攻略用
     //currentMethod = &Operator::slalomOff; // 難所「板の後半」攻略用
     //currentMethod = &Operator::moveToBlock; // 難所「ブロックキャッチ」攻略用
@@ -279,7 +281,7 @@ void Operator::lineTraceDummy()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::lineTraceDummy] 第７カーブ後直線");
-	lineTraceAt(80,&withR60);
+	lineTraceAt(80,&withR60); 
 	if ( getCPDistance() > 25350-500 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
@@ -289,12 +291,17 @@ void Operator::lineTraceDummy()
 
     } else if ( seqnum++ == getSequenceNumber() ) {
 	currentSequence("[Operator::lineTraceDummy] 第８カーブ後直線");
-	lineTraceAt(50,&withR60);
+	lineTraceAt(50,&withR60); 
 	if ( getCPDistance() > 27500 ) nextSequence();
 
     } else {
 	currentSequence("[Operator::lineTraceDummy] ライントレース終了");
-	nextMethod(&Operator::slalomOn);
+	#if defined(MAKE_RIGHT)
+    	nextMethod(&Operator::slalomAvoid);
+	#else
+    	nextMethod(&Operator::slalomOn);
+	#endif
+	
     }
 }
 
@@ -633,6 +640,123 @@ int Operator::lineTraceAt( int spd, LineTraceLogic* logic )
     machine->azimuth.setSpeed(turn);
     return spd;
 }
+
+//sasa★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+// slalomAvoid() からスタートする場合は、次のコマンドを実行する。
+// 左コース用：
+// curl -X POST -H "Content-Type: application/json" -d '{"initLX":"8.0","initLY":"0","initLZ":"15.5","initLROT":"90"}' http://localhost:54000
+// 右コース用：
+// curl -X POST -H "Content-Type: application/json" -d '{"initRX":"-10.5","initRY":"0","initRZ":"15.5","initRROT":"-90"}' http://localhost:54000
+
+void Operator::slalomAvoid()
+{
+    int seqnum = 0;
+    if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] スラローム回避開始");
+    nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 板にぶつかるまでライントレースする");
+    lineTraceAt(30,&withR60);
+    if ( getCounter() > 1000 ) nextSequence(); // 4ms x 1000 秒たったら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 姿勢を揃える");
+    moveAt(10);
+    if ( getCounter() > 1000 ) nextSequence(); // 4ms x 1000 秒たったら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 徐々に速度を下げる");
+    int speed = moveAt(0);
+    if ( speed == 0 ) nextSequence(AZIMUTH|DIST); // 速度が0になったら、板の端をチェックポイントとしてマークして次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] バックする");
+    moveAt(-10);
+    if ( getCPDistance() < -300 ) nextSequence(); // チェックポイントの後方 -300 まで来たら次へ
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ブロック方向を向いて走る");
+    curveTo(20,250);
+    if ( getCPDistance() > 1550 ) nextSequence();
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ブロックの乗っている黒線を見つけるまで進む");
+    moveAt(20);
+    if ( machine->getRGB() < 30 ) nextSequence(DIST);
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ブロック方向を向く");
+    curveTo(7,-15);
+    if ( checkAzimuth(-17) ) nextSequence(); 
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ブロックを取りに行く");
+    moveAt(40);
+    if ( getCPDistance() > 1000 ) nextSequence(); 
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 下方向");
+    curveTo(20,-100);
+    if ( getCPDistance() > 2600 ) nextSequence(); 
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ガレージ方向");
+    curveTo(20,120);
+    if ( getCPDistance() > 3500 ) nextSequence(); 
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ゴール前の黒線を見つけるまで進む");
+    moveAt(20);
+    if ( machine->getRGB(1,0,0) < 50 ) nextSequence(AZIMUTH|DIST);
+    
+    }else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ガレージ方向を向く");
+    curveTo(0,360);
+    if ( checkAzimuth(360) ) nextSequence(); 
+
+    } else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] ライントレースしながらガレージへ");
+    lineTraceAt(10,&withR60);
+    if ( machine->getSonar() < 50 )nextSequence();
+
+    }else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 距離50");
+    lineTraceAt(10,&withR60);
+	if ( machine->getSonar() < 40 )nextSequence();
+
+    }else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 距離40");
+    lineTraceAt(10,&withR60);
+	if ( machine->getSonar() < 30 )nextSequence();
+
+    }else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 距離30");
+    lineTraceAt(10,&withR60);
+	if ( machine->getSonar() < 25 )nextSequence();
+
+    }else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 距離25 直進モード");
+    moveAt(10);
+	if ( machine->getSonar() < 10 )nextSequence();
+
+    }else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 距離10 直進モード");
+	moveAt(10);
+	if ( machine->getSonar() < 5 )nextSequence();
+
+    }else if ( seqnum++ == getSequenceNumber() ) {
+    currentSequence("[Operator::slalomAvoid] 距離5 停止");
+	moveAt(0);
+
+    } 
+
+}
+
+
+//sasa end
+
 
 // slalomOn() からスタートする場合は、次のコマンドを実行する。
 // 左コース用：
