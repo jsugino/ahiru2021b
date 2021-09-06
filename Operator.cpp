@@ -909,7 +909,7 @@ void Operator::slalomOff()
     } else if ( seqnum++ == getSequenceNumber() ) {
 	machine->armMotor->setAngle(-20);
 	currentSequence("[Operator::slalomOff] アーム上げて直進");
-	curveTo(50,330);
+	curveTo(40,330);
 	if ( getRelDistance() > 800 ) nextSequence();
 
     } else if ( seqnum++ == getSequenceNumber() ) {
